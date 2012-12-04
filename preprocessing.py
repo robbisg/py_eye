@@ -125,9 +125,7 @@ def remove_baseline_previous(data, mask, trial_info, fields, condition):
     c_data = data.copy()
     
     fix = trial_info[trial_info['Condition'] == condition]
-    
-    
-    
+
     for tr in fix:   
         for field in fields:
             trial = np.int(np.float(tr[0]))

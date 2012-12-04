@@ -11,7 +11,8 @@ path_d = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/'
 path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
-path_i = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/interp/'
+#path_i = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/interp/'
+path_i = '/media/DATA/eye_analysis/interp/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
 
 
@@ -24,7 +25,7 @@ baseline_condition = conf['baseline']
 file_list = os.listdir(path)
 
 results = []
-
+results = dict()
 for file in file_list:
     
     d_data = load_data_eye(path, file)
@@ -42,7 +43,7 @@ for file in file_list:
     
     mask_task = trial_info['Condition'] != baseline_condition
         
-    d_data = clear_eyeblink(d_data)
+    #d_data = clear_eyeblink(d_data)
     trial_info = extract_trials_info(d_data)
     
     print 'Trials no.' + str(len(trial_info))
@@ -123,7 +124,8 @@ for file in file_list:
     trial_info = nprec.append_fields(trial_info, 
                                          'Condition', 
                                          paradigm['Condition'][mask_blink_outlier]).data
-    
+    trial_info = trial_info[trial_info['Condition'] != 'FIX']
+    print len(trial_info)
     
     name = file.split('.')[0]
     behavioural = open_behavioural(path_bc, name+'.xlsx')

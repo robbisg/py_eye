@@ -84,3 +84,8 @@ def open_behavioural(path, subj):
                                ('Combination', np.int_, 1),])
     
     return behavioural
+
+def mean_time():
+    
+    
+    return 0

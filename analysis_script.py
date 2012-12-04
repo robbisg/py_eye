@@ -69,7 +69,12 @@ for file in file_list:
     
 
     name = file.split('.')[0]
-    behavioural = open_behavioural(path_bc, name+'.xlsx')
+    
+    try:
+        behavioural = open_behavioural(path_bc, name+'.xlsx')
+    except IOError,err:
+        print str(err)
+        continue
     
     m = mask_task * mask_blink_outlier
     m = m[1::2]

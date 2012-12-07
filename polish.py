@@ -42,29 +42,24 @@ def clear_first_trials(d_data):
     
     return d_data
 
-def detect_errors(d_data, trial_info, trial_expected=None):
+def detect_errors(d_data, trial_info, trial_expected, sensibility=0.2):
+    '''
+    trial_expected: numpy array with trial timing
+                    example: if the experiment contains two condition the first 
+                    with time 1 second and the latter with 3 seconds
+                    trial_expected = np.array([1.,3.])
+    sensibility : error in registration so a trial could last instead of 3 seconds
+                    3 + sensibility
+    '''    
     
-    data = d_data['data']
- 
-    expected_trial_timing = []
-    for i in np.arange(trial_expected['tr_number'], step=2):
-        expected_trial_timing.append(trial_expected['times'])
-    
-    expected_trial_timing = np.array(expected_trial_timing) * d_data['SampleRate']
-        
-    trial_expected['trial_timing'] = expected_trial_timing
-    
-    if len(expected_trial_timing) == trial_expected['tr_number']:
-        expected_trial_timing = expected_trial_timing[trial_expected['tr_number']:]
-    
-    
-    max_time = trial_expected['duration'].max()
+    max_time = trial_expected.max() + sensibility
+    max_points = max_time * d_data['SampleRate']
     errors = []
     
     trials = extract_trials_info(d_data)
     print max_time
     for trial in trials:
-        if trial[1] > 720.:
+        if trial[1] > max_points:
             errors.append(trial) 
             
        
@@ -77,6 +72,14 @@ def detect_pause(trial_info):
     return
             
 def correct_data(d_data, trial_info, errors, trial_expected):
+    '''
+    trial_expected: numpy array with trial timing
+                    example: if the experiment contains two condition the first 
+                    with time 1 second and the latter with 3 seconds
+                    trial_expected = np.array([1.,3.])
+    
+    '''
+    
     
     data = d_data['data']
     
@@ -100,7 +103,7 @@ def correct_data(d_data, trial_info, errors, trial_expected):
         #aggiungi 1 a tutti i trial da first_err_index + new_duration
         data['Trial'][first_err_index+new_duration:] = data['Trial'][first_err_index+new_duration:]+1
         
-        if (error[1] > trial_expected['duration'].sum()):
+        if (error[1] > (trial_expected.sum() * d_data['SampleRate'])):
             mask = data['Trial'] != trial_damaged + 1
             data = data[mask]
             mask_new = data['Trial'] > trial_damaged + 1

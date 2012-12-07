@@ -49,7 +49,7 @@ def remove_outliers(d_data, **kwargs):
     outlier_mask = False
     for field in fields:
         size_mask = size_outlier(data, max, min, field)
-        mean_mask = mean_outlier(data, std_thr, field)
+        mean_mask = mean_outlier(data, std_thr, field, size_mask)
         
         outlier_mask = outlier_mask + mean_mask + size_mask
         
@@ -73,20 +73,22 @@ def size_outlier(data, max, min, field):
         
     return total
     
-def mean_outlier(data, std_thr, field):
+def mean_outlier(data, std_thr, field, p_mask):
        
     t_mask = np.array([])
     
     for trial in np.unique(data['Trial']):
         
         mask = data['Trial'] == trial
-        m_data = data[mask]
+              
+        mask_trial_masked = np.logical_not(mask * p_mask)
         
-        mean = np.mean(data[mask][field])
+        mean = np.mean(data[mask_trial_masked][field])
+        std = np.std(data[mask_trial_masked][field])
         
         mask_m = size_outlier(data=data[mask], 
-                              max=mean+std_thr, 
-                              min=mean-std_thr, 
+                              max=mean+(std*std_thr), 
+                              min=mean-(std*std_thr), 
                               field=field)
         
         t_mask = np.hstack((t_mask, mask_m))
@@ -110,17 +112,17 @@ def window_outlier(mask, window):
     return mask
  
  
-def baseline_correction(data, mask, trial_info, fields, condition, type='previous'):
+def baseline_correction(data, valid_mask, trial_info, fields, condition, type='previous'):
     
     
     if type == 'previous':
-        c_data = remove_baseline_previous(data, mask, trial_info, fields, condition)
+        c_data = remove_baseline_previous(data, valid_mask, trial_info, fields, condition)
     else:
         foo()
       
     return c_data
     
-def remove_baseline_previous(data, mask, trial_info, fields, condition):
+def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
     
     c_data = data.copy()
     
@@ -131,23 +133,31 @@ def remove_baseline_previous(data, mask, trial_info, fields, condition):
             trial = np.int(np.float(tr[0]))
             
             mask_trial = data['Trial'] == trial
-            mask_baseline = mask_trial * mask
+            mask_baseline = mask_trial * valid_mask
             
             if np.count_nonzero(mask_baseline) == 0:
-                mask_baseline = data['Trial'] == trial + 1
-                ext_baseline = data[field][mask_baseline]
-                mean = np.mean(ext_baseline[:240])
+                mask_trial = data['Trial'] == trial + 1
+                mask_baseline = mask_trial * valid_mask
+                if np.count_nonzero(mask_baseline) != 0:
+                    ext_baseline = data[field][mask_baseline]
+                    mean = np.mean(ext_baseline[:240])
+                else:
+                    mean = 0
             else:
                 mean = np.mean(data[field][mask_baseline])
                 
             out = 'Trial corrected: ' + str(trial+1)
             mask_condition = data['Trial'] == trial + 1
             
+            mask_condition_masked = mask_condition * valid_mask
+            if np.count_nonzero(mask_condition_masked) == 0:
+                continue
+                
             sys.stdout.write('\r')
             sys.stdout.write(out)
             sys.stdout.flush()
             
-            c_data[field][mask_condition] = data[field][mask_condition] - mean
+            c_data[field][mask_condition_masked] = data[field][mask_condition_masked] - mean
             
     print '\n'
     return c_data    
@@ -167,7 +177,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         trial_length = len(data['Trial'][mask_trial])
         
         if (trial_length)*0.5 < outlier_length:
-            print 'Bad Trial'
+            #print 'Bad Trial'
             i = i + 1
             valid_mask[mask_trial] = False
         else:
@@ -185,7 +195,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         sys.stdout.flush()
         #print str(perc*100.),"  % completed         \r",  
     
-    print '\nBad Trials: '+str(i)+' percentage: '+str(i/trial*0.5)
+    print '\nBad Trials: '+str(i)+' percentage: '+str(np.float(i)/np.float(len(trial_info)))+'\n'
     
     return [data, valid_mask]
 

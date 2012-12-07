@@ -137,9 +137,31 @@ def read_xls_paradigm (path, filename):
     return paradigm
 
     
+def extract_trials_info(d_data):
+    
+    data = d_data['data']
+    
+    trial_info = []
+    
+    for trial in np.unique(data['Trial']):
+        mask_trial = data['Trial'] == trial
+        trial_d = data[mask_trial]
+      #  print str(trial)+' '+str(len(trial_d.T[0]))+ \
+      #  ' '+str(trial_d.T[0][len(trial_d.T[0])-1] - trial_d.T[0][0] )
+        
+        trial_info.append((trial, len(trial_d['Time']), \
+                           trial_d['Time'][len(trial_d['Time'])-1] - trial_d['Time'][0]))
+    
+    dt = np.dtype([('Trial', np.int16) , ('Length', np.int32), ('Index', np.int32)])
+       
+    return np.array(trial_info, dtype=dt)    
     
     
+def check_deleted_trials(d_data, trial_info, paradigm):
     
+    mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
+    
+    return paradigm['Trial'][True - mask_blink_outlier]
     
     
     

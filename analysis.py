@@ -86,7 +86,11 @@ def open_behavioural(path, subj):
     
     return behavioural
 
-def mean_time():
+def mean_time(d_data, trial_info):
+    
+    data = d_data['data']
+    
+    
     
     
     return 0

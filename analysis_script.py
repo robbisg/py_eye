@@ -32,6 +32,7 @@ results = dict()
 for file in file_list:
     
     d_data = load_data_eye(path, file)
+    
     trial_info = extract_trials_info(d_data)    
     
         
@@ -42,7 +43,8 @@ for file in file_list:
                                          paradigm['Condition']).data
         
     except ValueError, err:
-        continue
+        #continue
+        print err
     
     mask_task = trial_info['Condition'] != baseline_condition
         

@@ -2,6 +2,7 @@ import numpy as np
 import scipy.interpolate as sp
 from scipy import arange, array, exp
 import sys
+from sklearn.gaussian_process import GaussianProcess
 
 def pixel_to_mm (d_data, fields, factor):
     
@@ -82,10 +83,10 @@ def mean_outlier(data, std_thr, field, p_mask):
         mask = data['Trial'] == trial
               
         mask_trial_masked = np.logical_not(mask * p_mask)
-        
+
         mean = np.mean(data[mask_trial_masked][field])
         std = np.std(data[mask_trial_masked][field])
-        
+
         mask_m = size_outlier(data=data[mask], 
                               max=mean+(std*std_thr), 
                               min=mean-(std*std_thr), 
@@ -124,7 +125,7 @@ def baseline_correction(data, valid_mask, trial_info, fields, condition, type='p
     
 def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
     
-    c_data = data.copy()
+    #c_data = data.copy()
     
     fix = trial_info[trial_info['Condition'] == condition]
 
@@ -157,10 +158,10 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
             sys.stdout.write(out)
             sys.stdout.flush()
             
-            c_data[field][mask_condition_masked] = data[field][mask_condition_masked] - mean
+            data[field][mask_condition_masked] = data[field][mask_condition_masked] - mean
             
     print '\n'
-    return c_data    
+    return data    
         
 def interpolate_trial(data, trial_info, fields, valid_mask):
     
@@ -173,8 +174,8 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         trial = np.int(np.float(t))
         mask_trial = data['Trial'] == trial
         
-        outlier_length = np.count_nonzero(1 - valid_mask[mask_trial])
-        trial_length = len(data['Trial'][mask_trial])
+        outlier_length = np.count_nonzero(~valid_mask[mask_trial])
+        trial_length = np.count_nonzero(mask_trial)
         
         if (trial_length)*0.5 < outlier_length:
             #print 'Bad Trial'
@@ -182,6 +183,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
             valid_mask[mask_trial] = False
         else:
             try:
+                #data[mask_trial] = sklearn_fit(data, valid_mask, mask_trial, fields)
                 data[mask_trial] = interpolate(data, valid_mask, mask_trial, fields)
                 valid_mask[mask_trial] = True
             except ValueError, err:
@@ -211,9 +213,9 @@ def interpolate(data, valid_mask, mask_trial, fields):
         xx = np.linspace(0, len(mask), len(mask))
         
         x = xx[mask]
-        f = m_data[field][mask]
+        y = m_data[field][mask]
         
-        f_inter = sp.interp1d(x, f, kind='cubic')
+        f_inter = sp.interp1d(x, y, kind='cubic')
         
         f_extra = extrap1d(f_inter)
         
@@ -246,8 +248,29 @@ def extrap1d(interpolator):
         return array(map(pointwise, array(xs)))
 
     return ufunclike   
-       
-if __name__== '__main__':
-    import sys
+
     
-       
+def sklearn_fit(data, valid_mask, mask_trial, fields, func='gp'):
+    
+    mask = valid_mask[mask_trial]
+    m_data = data[mask_trial]
+    
+    for field in fields:
+        
+        x = np.linspace(0, len(mask), len(mask))
+        
+        x_i = x[mask]
+        y_i = m_data[field][mask]
+        
+        dy = 0.5 + 1.0 * np.random.random(y_i.shape)
+        
+        gp = GaussianProcess(corr='squared_exponential', theta0=1e-1,
+                     thetaL=1e-3, thetaU=1,
+                     nugget=(dy / y_i) ** 2,
+                     random_start=100)
+        
+        gp.fit(x_i[np.newaxis].T, y_i)
+        
+        m_data[field][~mask] = np.float32(gp.predict(x[~mask][np.newaxis].T))    
+
+    return m_data

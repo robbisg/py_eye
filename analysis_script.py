@@ -11,8 +11,8 @@ path_d = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/'
 path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
-#path_i = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/interp/'
-path_i = '/media/DATA/eye_analysis/interp/'
+path_i = '/home/robbis/eye/interp/'
+#path_i = '/media/DATA/eye_analysis/interp/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
 path_c = '/media/DATA/eye_analysis/corrected/'
 
@@ -63,6 +63,8 @@ for file in file_list:
     data_bl = baseline_correction(d_data['data'], valid_mask, trial_info, fields,
                                   baseline_condition, type='previous')
     
+    
+    valid_mask = correct_mask(d_data['data'], valid_mask, fields)
     #print data_bl.shape
     try:
         [i_data, definitive_mask] = interpolate_trial(data_bl, trial_info, fields, valid_mask)
@@ -80,7 +82,7 @@ for file in file_list:
         behavioural = open_behavioural(path_bc, name+'.xlsx')
     except IOError,err:
         print str(err)
-        continue
+        #continue
     
     m = mask_task * mask_blink_outlier
     m = m[1::2]
@@ -98,7 +100,7 @@ for file in file_list:
     
     
     #downsampling
-    an = mean_analysis(i_data, trial_cond, **conf)
+    an = mean_analysis(d_data['data'], trial_cond, **conf)
     
     results[name] = an
     

@@ -3,6 +3,7 @@ import scipy.interpolate as sp
 from scipy import arange, array, exp
 import sys
 from sklearn.gaussian_process import GaussianProcess
+from sklearn.linear_model import Ridge
 
 def pixel_to_mm (d_data, fields, factor):
     
@@ -82,10 +83,10 @@ def mean_outlier(data, std_thr, field, p_mask):
         
         mask = data['Trial'] == trial
               
-        mask_trial_masked = np.logical_not(mask * p_mask)
+        mask_trial_masked = ~p_mask[mask]
 
-        mean = np.mean(data[mask_trial_masked][field])
-        std = np.std(data[mask_trial_masked][field])
+        mean = np.mean(data[field][mask][mask_trial_masked])
+        std = np.std(data[field][mask][mask_trial_masked])
 
         mask_m = size_outlier(data=data[mask], 
                               max=mean+(std*std_thr), 
@@ -167,6 +168,8 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
     
     i = 0
     j = 0
+    
+    bad_trials = []
     for t in trial_info['Trial']:
         
         j = j + 1
@@ -178,7 +181,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         trial_length = np.count_nonzero(mask_trial)
         
         if (trial_length)*0.5 < outlier_length:
-            #print 'Bad Trial'
+            bad_trials.append(trial)
             i = i + 1
             valid_mask[mask_trial] = False
         else:
@@ -187,6 +190,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
                 data[mask_trial] = interpolate(data, valid_mask, mask_trial, fields)
                 valid_mask[mask_trial] = True
             except ValueError, err:
+                valid_mask[mask_trial] = False
                 continue
         perc = 0    
         perc = np.float(j)/np.float(len(trial_info['Trial']))
@@ -198,6 +202,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         #print str(perc*100.),"  % completed         \r",  
     
     print '\nBad Trials: '+str(i)+' percentage: '+str(np.float(i)/np.float(len(trial_info)))+'\n'
+    print bad_trials
     
     return [data, valid_mask]
 
@@ -207,6 +212,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
     m_data = data[mask_trial]
     
     #print 'Interpolating trial: '+str(np.unique(m_data['Trial']))
+    ridge = Ridge()
     
     for field in fields:
         
@@ -215,15 +221,23 @@ def interpolate(data, valid_mask, mask_trial, fields):
         x = xx[mask]
         y = m_data[field][mask]
         
-        f_inter = sp.interp1d(x, y, kind='cubic')
+        f_inter = sp.interp1d(x, y, kind='linear')
         
         f_extra = extrap1d(f_inter)
         
-        pt = f_extra(xx)      
+        yy = f_extra(xx)
         
-        m_data[field] = np.array(pt, dtype=np.float32)
+        smooth = sp.UnivariateSpline(xx, yy, s=1)
+        y_smooth = smooth(xx)
         
-    
+        try:
+            ridge.fit(np.vander(xx, 11), y_smooth)
+            y_fit = ridge.predict(np.vander(xx, 11))
+        except LinAlgError,err:
+            ridge.fit(np.vander(xx, 9), y_smooth)
+            y_fit = ridge.predict(np.vander(xx, 11))
+            
+        m_data[field] = np.array(y_fit, dtype=np.float32)
 
     return m_data
 
@@ -237,6 +251,8 @@ def extrap1d(interpolator):
     ys = interpolator.y
 
     def pointwise(x):
+    
+        
         if x < xs[0]:
             return ys[0]+(x-xs[0])*(ys[1]-ys[0])/(xs[1]-xs[0])
         elif x > xs[-1]:
@@ -250,27 +266,23 @@ def extrap1d(interpolator):
     return ufunclike   
 
     
-def sklearn_fit(data, valid_mask, mask_trial, fields, func='gp'):
+def correct_mask(data, valid_mask, fields):
     
-    mask = valid_mask[mask_trial]
-    m_data = data[mask_trial]
-    
-    for field in fields:
+    for trial in np.unique(data['Trial']):
+        mask_trial = data['Trial'] == trial
         
-        x = np.linspace(0, len(mask), len(mask))
+        valid_masked = valid_mask[mask_trial]
         
-        x_i = x[mask]
-        y_i = m_data[field][mask]
+        if valid_masked[-1] == False:
+            index = np.nonzero(mask_trial)[0][-1]
+            valid_mask[index] = True
+            for field in fields:
+                data[field][index] = 0.
         
-        dy = 0.5 + 1.0 * np.random.random(y_i.shape)
-        
-        gp = GaussianProcess(corr='squared_exponential', theta0=1e-1,
-                     thetaL=1e-3, thetaU=1,
-                     nugget=(dy / y_i) ** 2,
-                     random_start=100)
-        
-        gp.fit(x_i[np.newaxis].T, y_i)
-        
-        m_data[field][~mask] = np.float32(gp.predict(x[~mask][np.newaxis].T))    
-
-    return m_data
+        if valid_masked[0] == False:
+            index = np.nonzero(mask_trial)[0][0]
+            valid_mask[index] = True
+            for field in fields:
+                data[field][index] = 0. 
+                
+    return valid_mask

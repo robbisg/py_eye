@@ -140,7 +140,7 @@ for file in file_list:
         behavioural = open_behavioural(path_bc, name+'.xlsx')
     except IOError, err:
         print str(err)
-        continue
+        #continue
     
     #paradigm = paradigm[paradigm['Condition']!='FIX']
     
@@ -188,24 +188,22 @@ for key,sheet in sheets.iteritems():
             
 ##############################################################################à
 def write_deleted_trials(path_i):   
-    del_file = open(path_i+'/del_trials.txt', 'w')      
+    del_file = open(path_d+'/del_trials_number.txt', 'w')      
  
     for file in file_list:
         d_data = load_data_eye(path_i, file)
         trial_info = extract_trials_info(d_data)
-        paradigm = paradigm[paradigm['Condition']!='FIX']
+        d = []
+        mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
+        d = np.nonzero(~mask_blink_outlier)[0] + 2
         
-        trial_cond = nprec.append_fields(task_trial,
-                                     ['Accuracy', 'Combination'], 
-                                     [behavioural['Accuracy'][m], 
-                                     behavioural['Combination'][m]]).data
-        
+        del_file.write(file+' '+str(len(d))+' \r\n')       
 
     del_file.close()
     
     
 def count_good_trials():
-    count_file = open(path_i+'/count_trials.txt', 'w')      
+    count_file = open(path_i+'/count_trials_15_1.txt', 'w')      
     count_file.write('Subj C_inc C_tot  NC_inc NC_tot 1_inc 1_tot 2_inc 2_tot 3_inc 3_tot 4_inc 4_tot\r\n')
     for file in file_list:
         d_data = load_data_eye(path_i, file)
@@ -215,6 +213,7 @@ def count_good_trials():
                                          'Condition', 
                                          paradigm['Condition'][mask_blink_outlier]).data
         task_trial = trial_info[trial_info['Condition'] != 'FIX']
+        name = file.split('.')[0]
         behavioural = open_behavioural(path_bc, name+'.xlsx')
         m = mask_blink_outlier[1::2]
         trial_cond = nprec.append_fields(task_trial,

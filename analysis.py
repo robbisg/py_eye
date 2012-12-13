@@ -3,7 +3,7 @@ import numpy as np
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
-    print data
+    #print data
     for arg in kwargs:
         if arg == 'data_fields':
             fields = kwargs[arg].split(',')
@@ -28,10 +28,10 @@ def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     
     for field in fields:
         for c, mask in zip(conditions, c_mask):
-            print field
-            print c
-            print data[field][mask]
-            print np.unique(data['Trial'][mask])
+            #print field
+            #print c
+            #print data[field][mask]
+            #print np.unique(data['Trial'][mask])
             results[field][c]['mean'] = np.mean(data[field][mask])     
             results[field][c]['std']  = np.std(data[field][mask])
     

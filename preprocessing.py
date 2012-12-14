@@ -229,15 +229,15 @@ def interpolate(data, valid_mask, mask_trial, fields):
         
         smooth = sp.UnivariateSpline(xx, yy, s=1)
         y_smooth = smooth(xx)
-        
+        """
         try:
             ridge.fit(np.vander(xx, 11), y_smooth)
             y_fit = ridge.predict(np.vander(xx, 11))
         except LinAlgError,err:
             ridge.fit(np.vander(xx, 9), y_smooth)
             y_fit = ridge.predict(np.vander(xx, 11))
-            
-        m_data[field] = np.array(y_fit, dtype=np.float32)
+        """    
+        m_data[field] = np.array(y_smooth, dtype=np.float32)
 
     return m_data
 

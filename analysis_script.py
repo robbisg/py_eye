@@ -12,7 +12,7 @@ path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
 path_i = '/home/robbis/eye/interp/'
-#path_i = '/media/DATA/eye_analysis/interp/'
+path_f = '/home/robbis/eye/fitted/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
 path_c = '/media/DATA/eye_analysis/corrected/'
 
@@ -116,14 +116,14 @@ np.savetxt(path_data+'results_2.txt', results_arr,
 #Plot
 
 ########################################################################################
-file_list = os.listdir(path_i)
+file_list = os.listdir(path_f)
 file_list.sort()
 
 results = dict()
 
 for file in file_list:
     
-    d_data = load_data_eye(path_i, file)
+    d_data = load_data_eye(path_f, file)
     trial_info = extract_trials_info(d_data)
     #print np.max(trial_info['Trial'])
     mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
@@ -274,7 +274,60 @@ for file in file_list:
 
     file_o = file.split(' ')[0]+'.txt'
     write_corrected(path_data, file, path_c, file_o, d_data)
+
+######################################################################
+file_list = os.listdir(path_i)
+file_list.sort()
+
+results = dict()
+
+for file in file_list:
     
+    d_data = load_data_eye(path_i, file)
+    trial_info = extract_trials_info(d_data)
+    
+    
+    conf = read_configuration(path_d, 'eye_analysis.conf')
+    fields = conf['data_fields'].split(',')
+    s_data = split_data(d_data, fields)
+    
+    
+    mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
+    
+    trial_info = nprec.append_fields(trial_info, 
+                                         'Condition', 
+                                         paradigm['Condition'][mask_blink_outlier]).data
+    trial_info = trial_info[trial_info['Condition'] != 'FIX']
+    print len(trial_info)
+    
+    name = file.split('.')[0]
+    
+    try:
+        behavioural = open_behavioural(path_bc, name+'.xlsx')
+    except IOError, err:
+        print str(err)
+        continue
+    
+    #paradigm = paradigm[paradigm['Condition']!='FIX']
+    
+    m = mask_blink_outlier[1::2]
+    task_trial = trial_info[trial_info['Condition'] != baseline_condition]
+    
+    trial_cond = nprec.append_fields(task_trial,
+                                     ['Accuracy', 'Combination'], 
+                                     [behavioural['Accuracy'][m], 
+                                     behavioural['Combination'][m]]).data
+                            
+                            
+                            
+    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
+    
+    
+    a
+    
+    an = mean_analysis(d_data['data'], trial_cond, **conf)
+
+    results[name] = an   
 
 '''
 #Plot to do

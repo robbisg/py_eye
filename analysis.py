@@ -3,7 +3,7 @@ import numpy as np
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
-    print data
+    #print data
     for arg in kwargs:
         if arg == 'data_fields':
             fields = kwargs[arg].split(',')
@@ -52,9 +52,15 @@ def build_mask(data, trial_info, points=None):
         
     return total_mask
 
-def group_mean():
+def group_function(s_data, fields, functor=np.mean):
     
-    return None
+    r = dict()
+    
+    for field in fields:
+        
+        r[field] = functor(s_data[field], axis=1)
+    
+    return r
     
 
 def build_result_structure(conditions, fields):
@@ -88,11 +94,91 @@ def open_behavioural(path, subj):
     
     return behavioural
 
-def mean_time(d_data, trial_info):
+def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
+    
+    chunk_points = np.rint(chunk_time * d_data['SampleRate'])
+    
+    data = d_data['data']
+    splitted_data = d_data.copy()
+    
+    t_mask = False
+    for trial in np.unique(data['Trial']):
+        
+        m_trial = data['Trial'] == trial
+        
+        d_trial = data[m_trial]
+        n_chunks = np.floor(len(d_trial)/chunk_points)
+        
+        included_points = n_chunks * chunk_points
+        trial_first = np.nonzero(m_trial)[0][0]
+        
+        m_trial[trial_first+n_chunks:] = False
+        t_mask = t_mask + m_trial
+        
+        d_trial = d_trial[:included_points]
+        
+        d_trial = np.array(np.split(d_trial, n_chunks))
+        f_trial = functor(d_trial, fields)       
+        
+        for field in fields:
+            splitted_data['data'][field][m_trial] = f_trial[field]
+    
+    
+    return splitted_data['data'][np.array(t_mask, np.bool)]
+
+def analyze_timecourse(data, trial_cond, **kwargs):
+    
+    for arg in kwargs:
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')
+        if arg == 'conditions':
+            try:
+                conditions = np.int_(kwargs[arg].split(','))
+            except ValueError, err:
+                conditions = kwargs[arg].split(',')
+                continue
+        if arg == 'behavioural_field':
+            column = kwargs[arg]
+    
+    c_mask = []
+        
+    for condition in conditions:
+        m_cond_trial = trial_info[column] == condition
+        
+        mask_cond_data = build_mask(data, trial_info[m_cond_trial])
+        c_mask.append(mask_cond_data)
+    
+    
+    results = build_result_structure(fields, conditions)
+    
+    for field in fields:
+        for c, mask in zip(conditions, c_mask):
+            
+    
+            
+    return
+    
+    
+
+
+"""
+def mean_time(d_data, trial_info, time_chunks=20, **kwargs):
+    
+    for arg in kwargs:
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')
+        if arg == 'conditions':
+            try:
+                conditions = np.int_(kwargs[arg].split(','))
+            except ValueError, err:
+                conditions = kwargs[arg].split(',')
+                continue
+        if arg == 'behavioural_field':
+            column = kwargs[arg]
     
     data = d_data['data']
     
-    
-    
+    for condition in conditions:
     
     return 0
+"""

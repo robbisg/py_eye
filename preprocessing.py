@@ -235,7 +235,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
             y_fit = ridge.predict(np.vander(xx, 11))
         except LinAlgError,err:
             ridge.fit(np.vander(xx, 9), y_smooth)
-            y_fit = ridge.predict(np.vander(xx, 11))
+            y_fit = ridge.predict(np.vander(xx, 9))
         """    
         m_data[field] = np.array(y_smooth, dtype=np.float32)
 

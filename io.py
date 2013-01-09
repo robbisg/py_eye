@@ -165,7 +165,33 @@ def check_deleted_trials(d_data, trial_info, paradigm):
     
     
     
+def write_to_excel(result, filename):
+    '''
+    To be written
+    '''
     
+    
+    import xlwt
+
+    wbook = xlwt.Workbook()
+
+    sheet = results[name].keys()
+    sheets = dict()
+
+    for sh in sheet:
+        sheets[sh] = wbook.add_sheet(sh)
+    
+    for key,sheet in sheets.iteritems():
+        for c in range(len(names)):
+            sheet.write(c, 0, names[c])
+            subj = names[c]
+        
+            conditions = results[subj][key]
+            i = 0
+            for cond, r in results[subj][key].iteritems():
+                i = i + 1
+                sheets[key].write(c, i*2 - 1 , r['mean'])
+                sheets[key].write(c, i*2     , r['std'])
     
     
     

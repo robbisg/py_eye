@@ -203,7 +203,7 @@ def write_deleted_trials(path_i):
     
     
 def count_good_trials():
-    count_file = open(path_i+'/count_trials_15_1.txt', 'w')      
+    count_file = open(path_i+'count_trials.txt', 'w')      
     count_file.write('Subj C_inc C_tot  NC_inc NC_tot 1_inc 1_tot 2_inc 2_tot 3_inc 3_tot 4_inc 4_tot\r\n')
     for file in file_list:
         d_data = load_data_eye(path_i, file)
@@ -214,7 +214,11 @@ def count_good_trials():
                                          paradigm['Condition'][mask_blink_outlier]).data
         task_trial = trial_info[trial_info['Condition'] != 'FIX']
         name = file.split('.')[0]
-        behavioural = open_behavioural(path_bc, name+'.xlsx')
+        try:
+            behavioural = open_behavioural(path_bc, name+'.xlsx')
+        except IOError, err:
+            print str(err)
+            continue
         m = mask_blink_outlier[1::2]
         trial_cond = nprec.append_fields(task_trial,
                                      ['Accuracy', 'Combination'], 
@@ -320,9 +324,6 @@ for file in file_list:
                             
                             
     trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
-    
-    
-    a
     
     an = mean_analysis(d_data['data'], trial_cond, **conf)
 

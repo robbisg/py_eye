@@ -143,9 +143,9 @@ def analyze_timecourse(data, trial_cond, **kwargs):
     c_mask = []
         
     for condition in conditions:
-        m_cond_trial = trial_info[column] == condition
+        m_cond_trial = trial_cond[column] == condition
         
-        mask_cond_data = build_mask(data, trial_info[m_cond_trial])
+        mask_cond_data = build_mask(data, trial_cond[m_cond_trial])
         c_mask.append(mask_cond_data)
     
     
@@ -153,7 +153,7 @@ def analyze_timecourse(data, trial_cond, **kwargs):
     
     for field in fields:
         for c, mask in zip(conditions, c_mask):
-            
+            continue
     
             
     return

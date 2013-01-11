@@ -28,6 +28,33 @@ def mm_to_pixel (d_data, fields, factor):
     
     return d_data
 
+def merge_fields(d_data, **kwargs):
+    
+    
+    data = d_data['data']
+    
+    for arg in kwargs:    
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')
+    
+    i = 0
+    for field in fields:
+        if i == 0:
+            f = field
+            stacked = data[field]
+        else:
+            
+            stacked = np.vstack((stacked, data[field]))
+        i = i + 1    
+    
+    data[f] = np.mean(stacked, axis=0)
+    
+    d_data['data'] = data
+    
+    return d_data, f            
+            
+            
+
 def remove_outliers(d_data, **kwargs):
     
     for arg in kwargs:
@@ -114,8 +141,13 @@ def window_outlier(mask, window):
     return mask
  
  
-def baseline_correction(data, valid_mask, trial_info, fields, condition, type='previous'):
+def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs):
     
+    for arg in kwargs:    
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')          
+        if arg == 'baseline':
+            condition = kwargs[arg]
     
     if type == 'previous':
         c_data = remove_baseline_previous(data, valid_mask, trial_info, fields, condition)
@@ -147,7 +179,8 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
                     mean = 0
             else:
                 mean = np.mean(data[field][mask_baseline])
-                
+            
+              
             out = 'Trial corrected: ' + str(trial+1)
             mask_condition = data['Trial'] == trial + 1
             
@@ -158,6 +191,7 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
             sys.stdout.write('\r')
             sys.stdout.write(out)
             sys.stdout.flush()
+
             
             data[field][mask_condition_masked] = data[field][mask_condition_masked] - mean
             
@@ -267,6 +301,11 @@ def extrap1d(interpolator):
 
     
 def correct_mask(data, valid_mask, fields):
+    """
+    Function built to prevent high peaks when interpolating data
+    It fills the first and/or the last value of the trial, setting it to 0
+    if the first and/or the last value of the trial is an outlier
+    """
     
     for trial in np.unique(data['Trial']):
         mask_trial = data['Trial'] == trial

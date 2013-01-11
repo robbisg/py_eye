@@ -1,5 +1,7 @@
 import os
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.interpolate as sp
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
@@ -96,6 +98,11 @@ def open_behavioural(path, subj):
 
 def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
     
+    '''
+    Returns splitted data
+    '''
+    
+    
     chunk_points = np.rint(chunk_time * d_data['SampleRate'])
     
     data = d_data['data']
@@ -126,7 +133,7 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
     
     return splitted_data['data'][np.array(t_mask, np.bool)]
 
-def analyze_timecourse(data, trial_cond, **kwargs):
+def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     
     for arg in kwargs:
         if arg == 'data_fields':
@@ -138,25 +145,58 @@ def analyze_timecourse(data, trial_cond, **kwargs):
                 conditions = kwargs[arg].split(',')
                 continue
         if arg == 'behavioural_field':
-            column = kwargs[arg]
-    
-    c_mask = []
-        
-    for condition in conditions:
-        m_cond_trial = trial_info[column] == condition
-        
-        mask_cond_data = build_mask(data, trial_info[m_cond_trial])
-        c_mask.append(mask_cond_data)
-    
+            column = kwargs[arg]    
     
     results = build_result_structure(fields, conditions)
     
-    for field in fields:
-        for c, mask in zip(conditions, c_mask):
+    f = plt.figure()
+    
+    for condition in conditions:
+        i = 0
+        for field in fields:
+            i = i + 1
+            
+            a = f.add_subplot(len(fields),1,i)
+            
+            m_cond_trial = trial_cond[column] == condition
+            cond_trial = trial_cond[m_cond_trial]
+            data_list = []
+            dim = np.array([])
+            for trial in cond_trial['Trial']:
+                d_list = data[data['Trial'] == trial][field]
+                dim = np.append(dim, d_list.shape[0])
+                data_list.append(d_list)
+            
+            min = np.min(dim)
+            
+            data_list = [d[:min] for d in data_list]
+            
+            data_list = np.vstack(data_list)
+            mean = np.mean(data_list, axis=0)
+            std = np.std(data_list, axis=0)
+            
+            results[field][condition]['mean'] = mean
+            results[field][condition]['std'] = std
+            '''
+            xx = np.linspace(0, len(mean), len(mean))
+            yy = mean
+            
+            smooth = sp.UnivariateSpline(xx, yy, s=1)
+            y_smooth = smooth(xx)
+            
+            a.plot(y_smooth, alpha=0.5)
+            '''
+            a.plot(mean)
+            a.set_title(field)
+            a.legend(conditions)
+            xticks = np.arange(0, min/sample_rate, np.around((min/sample_rate)/7., decimals=2))
+            #a.set_xlim((0, min/sample_rate))
+            a.set_xticklabels(xticks)
             
     
+    
             
-    return
+    return results
     
     
 

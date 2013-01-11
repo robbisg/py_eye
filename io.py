@@ -2,6 +2,7 @@ import os
 import numpy as np
 import ConfigParser
 from polish import clear_first_trials
+import numpy.lib.recfunctions as nprec
 
 def load_data_eye(path, filename):
     
@@ -10,13 +11,14 @@ def load_data_eye(path, filename):
     hdr = open(name, 'r')
     
     i = 0
-    line = 'on'
+    line = ['##', 'on']
     print 'Loading '+ filename
-    while i <= 19 :
-        line = hdr.readline().split()
+    while line[0].find('#') != -1 :
+        line = hdr.readline().split('\t')
         i += 1
         if (line.count('Rate:') != 0):
             fs = float(line[len(line)-1])
+            print fs
         if (line.count('Area:')!= 0):
             dim_x = int(line[len(line)-2])
             dim_y = int(line[len(line)-1])
@@ -24,15 +26,31 @@ def load_data_eye(path, filename):
             img_x = int(line[len(line)-2])
             img_y = int(line[len(line)-1])
     
-    
+    n_line = []
+    formats = []
+    for elem in line:
+        
+        if elem.find(' [px]') != -1:
+            elem = elem[:elem.find(' [px]')].replace(' ','_')
+        if elem == 'Set':
+            elem == 'Trial'
+            
+        n_line.append(elem)
+        
+        if elem == 'Type':
+            formats.append('S4')
+        else:
+            formats.append('f4')   
+            
+     
     data = np.genfromtxt(name,
-                        dtype={'names': ['Time','Type','Trial',
-                                        'L Raw X',' L Raw Y','L Dia X',
-                                        'L Dia Y','L CR1 X','L CR1 Y',
-                                        'L POR X','L POR Y','Timing','Latency'],                      
-                               'formats': ['f4', 'S4',  'f4', 'f4', 'f4',
-                                         'f4', 'f4', 'f4', 'f4',
-                                         'f4', 'f4', 'f4', 'f4']    
+                        dtype={'names': n_line,#['Time','Type','Trial',
+                                        #'L Raw X',' L Raw Y','L Dia X',
+                                        #'L Dia Y','L CR1 X','L CR1 Y',
+                                        #'L POR X','L POR Y','Timing','Latency'],                      
+                               'formats': formats#['f4', 'S4',  'f4', 'f4', 'f4',
+                                         #'f4', 'f4', 'f4', 'f4',
+                                         #'f4', 'f4', 'f4', 'f4']    
                                },
                 #         filling_values = 'SMP',
                         #converters = {1: lambda s: float(s.count('') or 0)},
@@ -45,12 +63,15 @@ def load_data_eye(path, filename):
     #            'L Dia Y','L CR1 X','L CR1 Y',
     #            'L POR X','L POR Y','Timing','Latency']
     
+    if 'fs' not in locals():
+        print line
+    
     value = [fs, dim_x, dim_y, img_x, img_y, data]
     keys  = ['SampleRate', 'ScreenX', 'ScreenY', 'StimX', 'StimY', 'data']
     
     d_data = dict(zip(keys, value))
     
-    d_data = clear_first_trials(d_data)
+    #d_data = clear_first_trials(d_data)
 
     return d_data
 
@@ -129,8 +150,14 @@ def read_xls_paradigm (path, filename):
     book = xlrd.open_workbook(fn)
     sh = book.sheet_by_index(0)
     
-    paradigm = np.array(zip(sh.col_values(0)[1:], 
-                            np.int_(sh.col_values(1)[1:])), 
+    labels = sh.row_values(0)
+    l_array = np.array(labels, dtype = np.str)
+    
+    t_index = np.nonzero(l_array == str.upper('Trial'))[0]
+    c_index = np.nonzero(l_array == str.upper('Cond'))[0]
+    
+    paradigm = np.array(zip(sh.col_values(c_index)[1:], 
+                            np.int_(sh.col_values(t_index)[1:])), 
                         dtype=[('Condition', np.str_,4),
                                 ('Trial', np.int_, 1)])
     
@@ -165,9 +192,39 @@ def check_deleted_trials(d_data, trial_info, paradigm):
     
     
     
+def merge_paradigm(trial_info, paradigm, behavioural, **conf):
     
     
+    baseline_condition = ''
+    for arg in conf:
+        if arg == 'baseline':
+            baseline_condition = conf[arg]
     
+    
+    mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
+        
+    trial_info = nprec.append_fields(trial_info, 
+                                     'Condition', 
+                                     paradigm['Condition'][mask_blink_outlier]).data
+
+    
+    mask_task = paradigm['Condition'] != baseline_condition
+        
+    
+    print 'Trials no.' + str(len(trial_info))
+
+    
+    m = mask_task * mask_blink_outlier
+    m = m[1::2]
+    
+    trial_task_info = trial_info[trial_info['Condition'] != baseline_condition]
+    
+    trial_cond = nprec.append_fields(trial_task_info,
+                                     ['Accuracy', 'Combination'], 
+                                     [behavioural['Accuracy'][m], 
+                                     behavioural['Combination'][m]]).data
+                                     
+    return trial_cond, trial_info
     
     
     

@@ -3,7 +3,7 @@ import numpy as np
 def clear_eyeblink(d_data):
     
     data = d_data['data']
-    mask_eb = data['L_Raw_X'] != 0 #Clear eyeblinks
+    mask_eb = data['L_Raw_X'] != 0 #Good values
     
     t_info = extract_trials_info(d_data)
     

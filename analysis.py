@@ -170,7 +170,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             min = np.min(dim)
             
             data_list = [d[:min] for d in data_list]
-            
+            continue
             data_list = np.vstack(data_list)
             mean = np.mean(data_list, axis=0)
             std = np.std(data_list, axis=0)

@@ -77,14 +77,19 @@ def remove_outliers(d_data, **kwargs):
     
     outlier_mask = False
     for field in fields:
+        
+        
         size_mask = size_outlier(data, max, min, field)
+        size_mask = window_outlier(size_mask, window)
+        
         mean_mask = mean_outlier(data, std_thr, field, size_mask)
+        mean_mask = window_outlier(mean_mask, window)
         
         outlier_mask = outlier_mask + mean_mask + size_mask
         
-    valid_mask = window_outlier(outlier_mask, window)
-    valid_mask = True - valid_mask
-    
+    #valid_mask = window_outlier(outlier_mask, window)
+    #valid_mask = True - valid_mask
+    valid_mask = ~outlier_mask
     #data = data[final_mask]
     
     #d_data['data'] = data
@@ -126,6 +131,12 @@ def mean_outlier(data, std_thr, field, p_mask):
         
     
 def window_outlier(mask, window):
+    '''
+    Outliers detected were increased using a window
+    for each outlier a window of @window point will be build
+    the outlier found is the center of the interval of +window
+    and -window points
+    '''
     
     for index in np.nonzero(np.int_(mask))[0]:
         begin = index - window
@@ -136,7 +147,9 @@ def window_outlier(mask, window):
         if end > len(mask) - 1:
             end = len(mask) - 1
         
-        mask[begin:end] = True
+        #is setted as true because the mask is true where we have
+        #an outlier
+        mask[begin:end] = True 
         
     return mask
  
@@ -152,10 +165,35 @@ def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs)
     if type == 'previous':
         c_data = remove_baseline_previous(data, valid_mask, trial_info, fields, condition)
     else:
-        foo()
+        c_data = remove_baseline_trial(data, valid_mask, trial_info, fields, condition)
       
     return c_data
+
+def remove_baseline_trial(data, valid_mask, trial_info, fields, condition):
     
+    for tr in trial_info:
+        for field in fields:
+            trial = np.int(np.float(tr[0]))
+            
+            mask_trial = data['Trial'] == trial
+            mask_condition = mask_trial * valid_mask
+            data_baseline = data[field][mask_condition][:240]          
+            
+            mean = np.mean(data_baseline)
+            
+            if np.isnan(mean):
+                continue
+                mean = 0
+            
+            mask_data = mask_trial * valid_mask
+            
+            if np.count_nonzero(mask_data) == 0:
+                continue
+                        
+            data[field][mask_data] = data[field][mask_data] - mean
+            
+    return data
+
 def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
     
     #c_data = data.copy()
@@ -261,7 +299,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
         
         yy = f_extra(xx)
         
-        smooth = sp.UnivariateSpline(xx, yy, s=1)
+        smooth = sp.UnivariateSpline(xx, yy, s=5)
         y_smooth = smooth(xx)
         """
         try:

@@ -9,22 +9,22 @@ def load_data_eye(path, filename):
     name = os.path.join(path, filename)
     
     hdr = open(name, 'r')
-    
-    i = 0
+
     line = ['##', 'on']
     print 'Loading '+ filename
+    
     while line[0].find('#') != -1 :
+
         line = hdr.readline().split('\t')
-        i += 1
-        if (line.count('Rate:') != 0):
-            fs = float(line[len(line)-1])
-            print fs
-        if (line.count('Area:')!= 0):
-            dim_x = int(line[len(line)-2])
-            dim_y = int(line[len(line)-1])
-        if (line.count('Stimulus')!= 0):
-            img_x = int(line[len(line)-2])
-            img_y = int(line[len(line)-1])
+
+        if (line[0].find('Rate:') != -1):
+            fs = float(line[1])
+        if (line[0].find('Area:')!= -1):
+            dim_x = int(line[1])
+            dim_y = int(line[2])
+        if (line[0].find('Stimulus')!= -1):
+            img_x = int(line[1])
+            img_y = int(line[2])
     
     n_line = []
     formats = []
@@ -33,7 +33,7 @@ def load_data_eye(path, filename):
         if elem.find(' [px]') != -1:
             elem = elem[:elem.find(' [px]')].replace(' ','_')
         if elem == 'Set':
-            elem == 'Trial'
+            elem = 'Trial'
             
         n_line.append(elem)
         
@@ -58,20 +58,12 @@ def load_data_eye(path, filename):
                         skip_header = 21)
     
     
-    #data_col = ['Time','Type','Trial',
-    #            'L Raw X',' L Raw Y','L Dia X',
-    #            'L Dia Y','L CR1 X','L CR1 Y',
-    #            'L POR X','L POR Y','Timing','Latency']
-    
-    if 'fs' not in locals():
-        print line
-    
     value = [fs, dim_x, dim_y, img_x, img_y, data]
     keys  = ['SampleRate', 'ScreenX', 'ScreenY', 'StimX', 'StimY', 'data']
     
     d_data = dict(zip(keys, value))
     
-    #d_data = clear_first_trials(d_data)
+    d_data = clear_first_trials(d_data)
 
     return d_data
 
@@ -86,14 +78,30 @@ def write_corrected(pathI, filenameI, pathO, filenameO, d_data):
     outputfile = open(o_name, 'w')
     
     i = 0
-    
-    for i in range(20):
+    line = ['begin']
+    while line[0].isdigit() == False:
         l_in = inputfile.readline()
+        print line
+        line = l_in.split()
         outputfile.write(l_in)
     
+    data_type = d_data['data'].dtype
+    fmt = []
+    for name in data_type.names:
+        if name.find('_') == -1 and data_type[name].kind != 'S':
+            fmt.append('%d')
+        elif data_type[name].kind == 'S':
+            fmt.append('%s')
+        elif name.find('Dia') != -1:
+            fmt.append('%2.6f')
+        else:
+            fmt.append('%4.4f')
+        
+    
+    '''
     fmt = ['%d','%s', '%d', '%4.4f', '%4.4f','%2.6f',
           '%2.6f', '%4.4f', '%4.4f', '%4.4f','%4.4f', '%d', '%d']
-      
+    '''  
     np.savetxt(outputfile, d_data['data'], fmt=fmt, delimiter='\t', newline='\r\n')
     
     inputfile.close()
@@ -122,7 +130,7 @@ def read_configuration(path, conf_path):
         
         for item in config.items(sec):
             configuration.append(item)
-            print item
+            #print item
     
     return dict(configuration)   
 
@@ -221,7 +229,7 @@ def write_to_excel(result, filename):
                 sheets[key].write(c, i*2     , r['std'])
     
     
-def merge_paradigm(trial_info, paradigm, behavioural, **conf):
+def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
     
     
     baseline_condition = ''
@@ -241,18 +249,21 @@ def merge_paradigm(trial_info, paradigm, behavioural, **conf):
     
     print 'Trials no.' + str(len(trial_info))
 
+    if behavioural != None:
+        m = mask_task * mask_blink_outlier
+        m = m[1::2]
     
-    m = mask_task * mask_blink_outlier
-    m = m[1::2]
+        trial_task_info = trial_info[trial_info['Condition'] != baseline_condition]
     
-    trial_task_info = trial_info[trial_info['Condition'] != baseline_condition]
-    
-    trial_cond = nprec.append_fields(trial_task_info,
+        trial_cond = nprec.append_fields(trial_task_info,
                                      ['Accuracy', 'Combination'], 
                                      [behavioural['Accuracy'][m], 
                                      behavioural['Combination'][m]]).data
                                      
-    return trial_cond, trial_info
+        return trial_cond, trial_info
     
+    else:
+        
+        return trial_info
     
     

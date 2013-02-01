@@ -164,12 +164,15 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             dim = np.array([])
             for trial in cond_trial['Trial']:
                 d_list = data[data['Trial'] == trial][field]
-                dim = np.append(dim, d_list.shape[0])
+                if d_list.shape[0] != 0:
+                    dim = np.append(dim, d_list.shape[0])
+                else:
+                    continue
                 data_list.append(d_list)
             
-            min = np.min(dim)
+            min_ = np.min(dim)
             
-            data_list = [d[:min] for d in data_list]
+            data_list = [d[:min_] for d in data_list]
 
             data_list = np.vstack(data_list)
             mean = np.mean(data_list, axis=0)
@@ -189,7 +192,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             a.plot(mean)
             a.set_title(field)
             a.legend(conditions)
-            xticks = np.arange(0, min/sample_rate, np.around((min/sample_rate)/7., decimals=2))
+            xticks = np.arange(0, min_/sample_rate, np.around((min_/sample_rate)/7., decimals=2))
             #a.set_xlim((0, min/sample_rate))
             a.set_xticklabels(xticks)
             

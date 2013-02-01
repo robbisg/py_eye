@@ -80,16 +80,16 @@ def remove_outliers(d_data, **kwargs):
         
         
         size_mask = size_outlier(data, max, min, field)
-        size_mask = window_outlier(size_mask, window)
+        #size_mask = window_outlier(size_mask, window)
         
         mean_mask = mean_outlier(data, std_thr, field, size_mask)
-        mean_mask = window_outlier(mean_mask, window)
+        #mean_mask = window_outlier(mean_mask, window)
         
         outlier_mask = outlier_mask + mean_mask + size_mask
         
-    #valid_mask = window_outlier(outlier_mask, window)
-    #valid_mask = True - valid_mask
-    valid_mask = ~outlier_mask
+    valid_mask = window_outlier(outlier_mask, window)
+    valid_mask = True - valid_mask
+    #valid_mask = ~outlier_mask
     #data = data[final_mask]
     
     #d_data['data'] = data
@@ -156,20 +156,26 @@ def window_outlier(mask, window):
  
 def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs):
     
+    points = 240
+    
     for arg in kwargs:    
         if arg == 'data_fields':
             fields = kwargs[arg].split(',')          
         if arg == 'baseline':
             condition = kwargs[arg]
+        if arg == 'baseline_size':
+            points = int(kwargs[arg])
     
     if type == 'previous':
-        c_data = remove_baseline_previous(data, valid_mask, trial_info, fields, condition)
+        c_data = remove_baseline_previous(data, valid_mask, trial_info, 
+                                          fields, points, condition)
     else:
-        c_data = remove_baseline_trial(data, valid_mask, trial_info, fields, condition)
+        c_data = remove_baseline_trial(data, valid_mask, trial_info, 
+                                       fields, points, condition)
       
     return c_data
 
-def remove_baseline_trial(data, valid_mask, trial_info, fields, condition):
+def remove_baseline_trial(data, valid_mask, trial_info, fields, points, condition):
     
     for tr in trial_info:
         for field in fields:
@@ -177,7 +183,7 @@ def remove_baseline_trial(data, valid_mask, trial_info, fields, condition):
             
             mask_trial = data['Trial'] == trial
             mask_condition = mask_trial * valid_mask
-            data_baseline = data[field][mask_condition][:240]          
+            data_baseline = data[field][mask_condition][:points]          
             
             mean = np.mean(data_baseline)
             
@@ -194,7 +200,7 @@ def remove_baseline_trial(data, valid_mask, trial_info, fields, condition):
             
     return data
 
-def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
+def remove_baseline_previous(data, valid_mask, trial_info, fields, points, condition):
     
     #c_data = data.copy()
     
@@ -212,7 +218,7 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, condition):
                 mask_baseline = mask_trial * valid_mask
                 if np.count_nonzero(mask_baseline) != 0:
                     ext_baseline = data[field][mask_baseline]
-                    mean = np.mean(ext_baseline[:240])
+                    mean = np.mean(ext_baseline[:points])
                 else:
                     mean = 0
             else:
@@ -338,7 +344,7 @@ def extrap1d(interpolator):
     return ufunclike   
 
     
-def correct_mask(data, valid_mask, fields):
+def correct_mask(data, valid_mask, fields, points):
     """
     Function built to prevent high peaks when interpolating data
     It fills the first and/or the last value of the trial, setting it to 0
@@ -346,20 +352,29 @@ def correct_mask(data, valid_mask, fields):
     """
     
     for trial in np.unique(data['Trial']):
+        #Full mask of data, with True on trial
         mask_trial = data['Trial'] == trial
         
+        #Masked of non outlier length of 
         valid_masked = valid_mask[mask_trial]
         
+        
+        #Final value of outlier vector
         if valid_masked[-1] == False:
             index = np.nonzero(mask_trial)[0][-1]
             valid_mask[index] = True
             for field in fields:
-                data[field][index] = 0.
-        
+                #data[field][index] = 0.
+                mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
+                data[field][index] = mean_d
+                
+        #First value of outlier vector
         if valid_masked[0] == False:
             index = np.nonzero(mask_trial)[0][0]
             valid_mask[index] = True
             for field in fields:
-                data[field][index] = 0. 
+                #data[field][index] = 0. 
+                mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
+                data[field][index] = mean_d
                 
     return valid_mask

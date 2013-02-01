@@ -13,6 +13,7 @@ path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
 path_i = '/home/robbis/eye/interp/'
 path_f = '/home/robbis/eye/fitted/'
+path_bi = '/home/robbis/eye/interp_baseline/'
 path_blink = '/home/robbis/eye/blink/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
 path_c = '/media/DATA/eye_analysis/corrected/'
@@ -56,35 +57,38 @@ for file in file_list:
     conf['data_fields'] = field
     
     valid_mask = remove_outliers(d_data, **conf)
-
-    data_bl = baseline_correction(d_data['data'], valid_mask, trial_info, 
+    
+    
+    valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
+    
+    
+    try:
+        [i_data, definitive_mask] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
+    except ValueError, err:
+        continue
+    
+    data_bl = baseline_correction(d_data['data'], definitive_mask, trial_info, 
                                   type='previous', **conf)
     
     
-    valid_mask = correct_mask(d_data['data'], valid_mask, fields)
-    
-    '''
-    try:
-        [i_data, definitive_mask] = interpolate_trial(data_bl, trial_info, fields, valid_mask)
-    except ValueError, err:
-        continue
-    '''
-
-    d_data['data'] = data_bl[valid_mask]
+    d_data['data'] = data_bl[definitive_mask]
     #d_data['data'] = i_data[definitive_mask]
     #write_corrected(path, file, path_blink, file, d_data)
-    #write_corrected(path, file, path_i, file, d_data)
+    write_corrected(path, file, path_bi, file, d_data)
     
     ##########################################################
+    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
 
-   
+    an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
+
+    results[name] = an
     
-    
+    '''
     #downsampling
     an = mean_analysis(d_data['data'], trial_cond, **conf)
     
     results[name] = an
-
+    '''
 
 
 #Plot

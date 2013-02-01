@@ -67,6 +67,25 @@ def load_data_eye(path, filename):
 
     return d_data
 
+def drop_data(d_data, duration = 10.):
+    """
+    duration = Trial duration in seconds
+    """
+    
+    points = duration * d_data['SampleRate']
+    data = d_data['data']
+    
+    total_mask = False
+    
+    for trial in np.unique(data['Trial']):
+        mask = data['Trial'] == trial
+        first_pt = np.nonzero(mask)[0][0]
+        mask[first_pt+points:] = False
+        total_mask = total_mask + mask
+        
+    d_data['data'] = data[total_mask]
+    
+    return d_data
 
 def write_corrected(pathI, filenameI, pathO, filenameO, d_data):
     

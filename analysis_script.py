@@ -11,7 +11,7 @@ path_d = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/'
 path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
-path_i = '/home/robbis/eye/interp/'
+path_i = '/media/DATA/eye_analysis/interp_baseline/'
 path_f = '/home/robbis/eye/fitted/'
 path_bi = '/home/robbis/eye/interp_baseline/'
 path_blink = '/home/robbis/eye/blink/'
@@ -49,15 +49,12 @@ for file in file_list:
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
     
     #####################################################
-    
-    d_data = clear_eyeblink(d_data)
-    
+      
     d_data, field = merge_fields(d_data, **conf)
     
     conf['data_fields'] = field
     
     valid_mask = remove_outliers(d_data, **conf)
-    
     
     valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
     
@@ -67,26 +64,25 @@ for file in file_list:
     except ValueError, err:
         continue
     
-    data_bl = baseline_correction(d_data['data'], definitive_mask, trial_info, 
+    d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
                                   type='previous', **conf)
     
+    d_data['data'] = d_data['data'][definitive_mask]
     
-    d_data['data'] = data_bl[definitive_mask]
     #d_data['data'] = i_data[definitive_mask]
     #write_corrected(path, file, path_blink, file, d_data)
-    write_corrected(path, file, path_bi, file, d_data)
+    write_corrected(path, file, path_i, file, d_data)
     
     ##########################################################
     trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
 
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
-
     results[name] = an
-    
-    '''
     #downsampling
-    an = mean_analysis(d_data['data'], trial_cond, **conf)
-    
+    #an = mean_analysis(d_data['data'], trial_cond, **conf)
+    trial_info = extract_trials_info(d_data)
+    trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
+    an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     results[name] = an
     '''
 
@@ -287,6 +283,7 @@ for file in file_list:
     #s_data = split_data(d_data, [field])    
     #downsampling
     #acn = analyze_timecourse(s_data, trial_cond, d_data['SampleRate'], **conf)
+    trial_info = extract_trials_info(d_data)
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     del d_data#, s_data
     results[name] = an

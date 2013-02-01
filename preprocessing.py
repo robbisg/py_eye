@@ -89,7 +89,7 @@ def remove_outliers(d_data, **kwargs):
         
     valid_mask = window_outlier(outlier_mask, window)
     valid_mask = True - valid_mask
-    #valid_mask = ~outlier_mask
+    
     #data = data[final_mask]
     
     #d_data['data'] = data
@@ -290,7 +290,6 @@ def interpolate(data, valid_mask, mask_trial, fields):
     m_data = data[mask_trial]
     
     #print 'Interpolating trial: '+str(np.unique(m_data['Trial']))
-    ridge = Ridge()
     
     for field in fields:
         
@@ -344,7 +343,7 @@ def extrap1d(interpolator):
     return ufunclike   
 
     
-def correct_mask(data, valid_mask, fields, points):
+def correct_mask(data, valid_mask, fields, points = 120):
     """
     Function built to prevent high peaks when interpolating data
     It fills the first and/or the last value of the trial, setting it to 0
@@ -364,17 +363,16 @@ def correct_mask(data, valid_mask, fields, points):
             index = np.nonzero(mask_trial)[0][-1]
             valid_mask[index] = True
             for field in fields:
-                #data[field][index] = 0.
+                data[field][index] = np.mean(data[field][mask_trial][valid_masked][-points:])
                 mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
                 data[field][index] = mean_d
                 
         #First value of outlier vector
+        
         if valid_masked[0] == False:
             index = np.nonzero(mask_trial)[0][0]
             valid_mask[index] = True
             for field in fields:
-                #data[field][index] = 0. 
-                mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
-                data[field][index] = mean_d
+                data[field][index] = np.mean(data[field][mask_trial][valid_masked][:points])
                 
     return valid_mask

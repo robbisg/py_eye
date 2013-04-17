@@ -2,8 +2,11 @@ import numpy as np
 import scipy.interpolate as sp
 from scipy import arange, array, exp
 import sys
+import matplotlib.pyplot as plt
 from sklearn.gaussian_process import GaussianProcess
 from sklearn.linear_model import Ridge
+from sklearn import mixture
+from sklearn.cluster import KMeans
 
 def pixel_to_mm (d_data, fields, factor):
     
@@ -52,9 +55,205 @@ def merge_fields(d_data, **kwargs):
     d_data['data'] = data
     
     return d_data, f            
-            
-            
 
+def remove_outlier_mshift(d_data, **kwargs):
+    
+    for arg in kwargs:
+      
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')
+        if arg == 'window':
+            window = np.float(kwargs[arg])            
+        if arg == 'pupil_factor':
+            factor = np.float(kwargs[arg])
+    
+    from sklearn.cluster import MeanShift, estimate_bandwidth
+        
+    data = d_data['data']
+        
+    outlier_list = dict()
+    total_outlier = False
+    
+    
+    for field in fields:
+        
+        outlier_list[field] = []
+        
+        for trial in np.unique(data['Trial']):
+            indexes = []
+            f = plt.figure()
+            a = f.add_subplot(111)
+            mask_trial = data['Trial'] == trial
+            masked_data = data[mask_trial][field]
+            
+            X = masked_data[np.newaxis].T
+            
+            bandwidth = estimate_bandwidth(X, quantile=0.2)
+            if bandwidth < 0.9:
+                bandwidth = 1
+            ms = MeanShift(bandwidth=bandwidth, bin_seeding=True)
+            
+            ms.fit(X)
+            labels = ms.labels_
+            
+            '''
+            i_outliers = np.argsort(clf.means_.squeeze())
+            
+            mean_top = clf.means_.squeeze()[i_outliers[2]]
+            mean_low = clf.means_.squeeze()[i_outliers[0]]
+            mean_true = clf.means_.squeeze()[i_outliers[1]]
+            
+            if mean_low == 0:
+                indexes.append(i_outliers[0])
+            if (mean_top - mean_true) > 3 * clf.covars_.squeeze()[i_outliers[1]]:
+                indexes.append(i_outliers[2])
+            if (mean_true - mean_low) > 3 * clf.covars_.squeeze()[i_outliers[1]]:
+                indexes.append(i_outliers[0])
+                
+            outlier = np.zeros(np.shape(masked_data), np.bool)
+            for i in indexes:
+                outlier = outlier + (labels == i)
+            
+            
+            outlier_list[field].append(outlier)
+            
+            out = 'Trial analyzed: '+str(trial+1)
+            
+            sys.stdout.write('\r')
+            sys.stdout.write(out)
+            sys.stdout.flush()
+            '''
+            a.plot(masked_data)
+            a.plot(labels)
+            #a.plot(outlier)
+            
+        outlier_list[field] = np.hstack(outlier_list[field])
+
+        total_outlier = total_outlier + outlier_list[field]
+        
+    valid_mask = window_outlier(total_outlier, window)
+    valid_mask = True - valid_mask
+    
+    return valid_mask
+            
+def remove_outliers_gmm(d_data, **kwargs):
+    
+    for arg in kwargs:
+      
+        if arg == 'data_fields':
+            fields = kwargs[arg].split(',')
+        if arg == 'window':
+            window = np.float(kwargs[arg])            
+        if arg == 'pupil_factor':
+            factor = np.float(kwargs[arg])
+    
+        
+    data = d_data['data']
+    
+    clf = mixture.GMM(n_components=3, covariance_type='full')
+    
+    outlier_list = dict()
+    total_outlier = False
+    
+    fb = plt.figure()
+    for field in fields:
+        
+        outlier_list[field] = []
+        b = fb.add_subplot(111)
+        for trial in np.unique(data['Trial']):#[::7]:
+            indexes = []
+            #f = plt.figure()
+            
+            #a = f.add_subplot(111)
+            #a.set_title(str(trial))
+            mask_trial = data['Trial'] == trial
+            masked_data = data[mask_trial][field]
+            """
+            if np.var(masked_data) < 0.1:
+                n = 2
+            else:
+                n = 3            
+            """
+            n = 3
+            
+            #z_data = stats.zscore(masked_data)
+             
+            clf = mixture.GMM(n_components=n, covariance_type='full')
+            
+            labels = clf.fit(masked_data).predict(masked_data)
+                        
+            i_outliers = np.argsort(clf.means_.squeeze())
+            
+            mean_top = clf.means_.squeeze()[i_outliers[2]]
+            mean_low = clf.means_.squeeze()[i_outliers[0]]
+            mean_true = clf.means_.squeeze()[i_outliers[1]]
+            
+            if mean_low < -1:
+                indexes.append(i_outliers[0])
+            if (mean_top - mean_true) > 2 * clf.covars_.squeeze()[i_outliers[1]]:
+                indexes.append(i_outliers[2])
+            if (mean_true - mean_low) > 2 * clf.covars_.squeeze()[i_outliers[1]]:
+                indexes.append(i_outliers[0])
+                
+            outlier = np.zeros(np.shape(masked_data), np.bool)
+            for i in indexes:
+                outlier = outlier + (labels == i)
+            
+            
+            outlier_list[field].append(outlier)
+            
+            out = 'Trial analyzed: '+str(trial+1)
+            
+            print trial
+            print np.mean(masked_data)
+            print np.var(masked_data)
+            print clf.means_.squeeze()
+            print clf.covars_.squeeze()
+            '''
+            sys.stdout.write('\r')
+            sys.stdout.write(out)
+            sys.stdout.flush()
+            '''
+            b.scatter(np.mean(masked_data), np.var(masked_data))
+            
+            '''
+            a.plot(masked_data)
+            a.plot(np.linspace(np.mean(masked_data), np.mean(masked_data), len(masked_data)))
+            a.plot(outlier)
+            '''
+        outlier_list[field] = np.hstack(outlier_list[field])
+
+        total_outlier = total_outlier + outlier_list[field]
+        
+    valid_mask = window_outlier(total_outlier, window)
+    valid_mask = True - valid_mask
+    
+    return valid_mask
+        
+def find_index_outlier(labels, means, covars):
+    
+    indexes = []
+    
+    i_outliers = np.argsort(means)
+    
+    if covars[i_outliers[1]] > 0.05:
+        if means[i_outliers[0]] == 0.:
+            true_index = i_outliers[2]
+    
+    
+    
+    mean_top = means[i_outliers[2]]
+    mean_low = means[i_outliers[0]]
+    mean_true = means[i_outliers[1]]
+            
+    if mean_low == 0:
+        indexes.append(i_outliers[0])
+    elif (mean_top - mean_true) > 2 * clf.covars_.squeeze()[i_outliers[1]]:
+        indexes.append(i_outliers[2])
+    elif (mean_true - mean_low) > 2 * clf.covars_.squeeze()[i_outliers[1]]:
+        indexes.append(i_outliers[0])
+    
+   
 def remove_outliers(d_data, **kwargs):
     
     for arg in kwargs:
@@ -71,7 +270,7 @@ def remove_outliers(d_data, **kwargs):
         if arg == 'pupil_factor':
             factor = np.float(kwargs[arg])
     
-    d_data = pixel_to_mm(d_data, fields, factor)
+    
         
     data = d_data['data']
     
@@ -218,7 +417,7 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, points, condi
                 mask_baseline = mask_trial * valid_mask
                 if np.count_nonzero(mask_baseline) != 0:
                     ext_baseline = data[field][mask_baseline]
-                    mean = np.mean(ext_baseline[:points])
+                    mean = np.mean(ext_baseline[points:])
                 else:
                     mean = 0
             else:
@@ -279,7 +478,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         sys.stdout.flush()
         #print str(perc*100.),"  % completed         \r",  
     
-    print '\nBad Trials: '+str(i)+' percentage: '+str(np.float(i)/np.float(len(trial_info)))+'\n'
+    print '\nBad Trials: '+str(i)+' percentage: '+str(np.float(i * 100)/np.float(len(trial_info)))+'\n'
     print bad_trials
     
     return [data, valid_mask]

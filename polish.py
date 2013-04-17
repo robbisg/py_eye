@@ -57,7 +57,7 @@ def detect_errors(d_data, trial_info, trial_expected, sensibility=0.2):
     errors = []
     
     trials = extract_trials_info(d_data)
-    print max_time
+    #print max_time
     for trial in trials:
         if trial[1] > max_points:
             errors.append(trial) 

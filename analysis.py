@@ -204,6 +204,8 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     
 
 
+
+
 """
 def mean_time(d_data, trial_info, time_chunks=20, **kwargs):
     

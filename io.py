@@ -67,6 +67,15 @@ def load_data_eye(path, filename):
 
     return d_data
 
+def get_trial(d_data, n_trial):
+    
+    data = d_data['data']
+    
+    mask = data['Trial'] == n_trial
+    
+    return data[mask]
+
+
 def drop_data(d_data, duration = 10.):
     """
     duration = Trial duration in seconds
@@ -100,7 +109,7 @@ def write_corrected(pathI, filenameI, pathO, filenameO, d_data):
     line = ['begin']
     while line[0].isdigit() == False:
         l_in = inputfile.readline()
-        print line
+        
         line = l_in.split()
         outputfile.write(l_in)
     
@@ -219,12 +228,12 @@ def check_deleted_trials(d_data, trial_info, paradigm):
     
     
     
-def write_to_excel(result, filename):
+def write_to_excel(results, filename):
     '''
     To be written
     '''
     
-    
+    names = results.keys()
     import xlwt
 
     wbook = xlwt.Workbook()

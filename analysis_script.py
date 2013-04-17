@@ -11,9 +11,9 @@ path_d = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/'
 path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
 path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
-path_i = '/media/DATA/eye_analysis/interp_baseline/'
+path_rem_bi = '/media/DATA/eye_analysis/interp_baseline/'
 path_f = '/home/robbis/eye/fitted/'
-path_bi = '/home/robbis/eye/interp_baseline/'
+path_i = '/home/robbis/eye/interp_baseline/'
 path_blink = '/home/robbis/eye/blink/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
 path_c = '/media/DATA/eye_analysis/corrected/'
@@ -29,7 +29,18 @@ file_list.sort()
 results = []
 results = dict()
 
-#file_list = ['Sub10_1.txt', 'Sub19_1.txt']
+for file in file_list:
+    
+    d_data = load_data_eye(path_data, file)
+    trial_info = extract_trials_info(d_data)
+    errors = detect_errors(d_data, trial_info, np.array([1., 3.]))
+    d_data = correct_data(d_data, trial_info, errors, np.array([1., 3.]))
+    trial_info = extract_trials_info(d_data)
+    file_o = file[:file.find(' ')]+'.txt'
+    print file_o + ' ' + str(len(trial_info))
+    
+    write_corrected(path_data, file, path, file_o, d_data)
+    
 
 for file in file_list:
     
@@ -53,8 +64,13 @@ for file in file_list:
     d_data, field = merge_fields(d_data, **conf)
     
     conf['data_fields'] = field
+    factor = np.float(conf['pupil_factor'])
+    fields = conf['data_fields'].split(',')
+    d_data = pixel_to_mm(d_data, fields, factor)
     
     valid_mask = remove_outliers(d_data, **conf)
+    #valid_mask = remove_outliers_gmm(d_data, **conf)
+    
     
     valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
     
@@ -62,7 +78,8 @@ for file in file_list:
     try:
         [i_data, definitive_mask] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
     except ValueError, err:
-        continue
+        print str(err)
+        #continue
     
     d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
                                   type='previous', **conf)
@@ -71,20 +88,17 @@ for file in file_list:
     
     #d_data['data'] = i_data[definitive_mask]
     #write_corrected(path, file, path_blink, file, d_data)
-    write_corrected(path, file, path_i, file, d_data)
-    
-    ##########################################################
-    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
+    #write_corrected(path, file, path_i, file, d_data)
 
-    an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
-    results[name] = an
+
     #downsampling
     #an = mean_analysis(d_data['data'], trial_cond, **conf)
     trial_info = extract_trials_info(d_data)
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
+    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     results[name] = an
-    '''
+
 
 
 #Plot
@@ -300,15 +314,18 @@ n_results = len(results[name][f][ex_cond].keys())
 import xlwt
 
 wbook = xlwt.Workbook()
-
+wbook_2 = xlwt.Workbook()
+sheet_2 = wbook_2.add_sheet('max')
 sheets = dict()
 for name in names:
     sheets[name] = wbook.add_sheet(name)
-    
+
+s2 = 0
 for name, sheet in sheets.iteritems():
     sheet.write(2, 0, 'time')
     fields = results[name].keys()
     f = 0
+    
     flag = 0
     for field in fields:
         f_pos = f * n_cond * n_results + 1
@@ -322,12 +339,22 @@ for name, sheet in sheets.iteritems():
             c = c + 1
             results_labels = results[name][field][cond].keys()
             r_col = 0
+            s2 = s2 + 1
             for r in results_labels:
                 r_pos = c_pos + r_col                
                 sheet.write(2, r_pos, r)
                 r_col = r_col + 1
                 
                 r_data = results[name][field][cond][r]
+                
+                if r == 'mean':
+                    sheet_2.write(s2, 0, name)
+                    sheet_2.write(s2, 1, cond)
+                    sheet_2.write(s2, 2, field)
+                    sheet_2.write(s2, 3, float(np.max(r_data)))
+                    time = np.arange(0, len(r_data)/240., 1/240.)
+                    sheet_2.write(s2, 4, float(time[r_data == np.max(r_data)][0]))
+                
                 for i in range(len(r_data)):
                     if flag == 0:
                         time = np.arange(0, len(r_data)/240., 1/240.)
@@ -370,16 +397,9 @@ for name in results:
             i = i + 1
         a.legend(results[name][field])    
     
-    f.savefig('/home/robbis/eye/'+name+'_err.png')
-    
-'''
-#Plot to do
-- Raw data
-- outlier
-- baseline correction
-- tracking perido
-- interpolation
-- smoothed data
+    f.savefig('/home/robbis/eye/'+name+'_err.png') 
 
-Look at average
-'''
+
+################################################################
+time = np.arange(0, len(r_data)/240., 1/240.)
+

@@ -98,8 +98,14 @@ def correct_data(d_data, trial_info, errors, trial_expected):
         m_error = trial_info['Trial'] == error[0]#mask
         i_error = m_error.nonzero()[0][0]#first index in data of the error
         
-        new_duration = trial_info[i_error-2][1]
         
+        i_error_pre = i_error-2
+        if i_error_pre < 0:
+            i_error_pre = i_error + 1
+        
+        
+        new_duration = trial_info[i_error_pre][1]
+        #print new_duration
         #aggiungi 1 a tutti i trial da first_err_index + new_duration
         data['Trial'][first_err_index+new_duration:] = data['Trial'][first_err_index+new_duration:]+1
         

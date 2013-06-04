@@ -445,7 +445,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
     
     i = 0
     j = 0
-    
+    cp_valid_mask = valid_mask.copy()
     bad_trials = []
     for t in trial_info['Trial']:
         
@@ -460,6 +460,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         if (trial_length)*0.5 < outlier_length:
             bad_trials.append(trial)
             i = i + 1
+            
             valid_mask[mask_trial] = False
         else:
             try:
@@ -480,6 +481,17 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
     
     print '\nBad Trials: '+str(i)+' percentage: '+str(np.float(i * 100)/np.float(len(trial_info)))+'\n'
     print bad_trials
+    '''
+    for t in bad_trials:
+        fig = plt.figure()
+        mask_trial = data['Trial'] == t
+        i = 1
+        for f in fields:
+            a = fig.add_subplot(len(fields), 1, i)
+            i = i + 1
+            a.plot(data[mask_trial][f])
+            a.plot(cp_valid_mask[mask_trial])
+    '''      
     
     return [data, valid_mask]
 

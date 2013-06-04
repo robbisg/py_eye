@@ -1,7 +1,7 @@
-from eye_analysis.io import *
-from eye_analysis.polish import *
-from eye_analysis.preprocessing import *
-from eye_analysis.analysis import *
+from py_eye.io import *
+from py_eye.polish import *
+from py_eye.preprocessing import *
+from py_eye.analysis import *
 import numpy.lib.recfunctions as nprec
 
 
@@ -17,8 +17,9 @@ path_f = '/home/robbis/eye/fitted/'
 path_i = '/media/DATA/eye/interp_baseline/'
 path_blink = '/home/robbis/eye/blink/'
 path_bc = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data corr/'
-path_c = '/media/DATA/eye_analysis/corrected/'
-
+path_c = '/media/DATA/eye/corrected/'
+path_b_2_6 = '/media/DATA/eye/interp_base_2_6.5/'
+path_b_2_8 = '/media/DATA/eye/interp_base_2_8/'
 
 conf = read_configuration(path_d, 'eye_analysis.conf')
 paradigm = read_paradigm(path_d, 'LISTA_SET.xlsx')
@@ -40,11 +41,11 @@ for file in file_list:
     file_o = file[:file.find(' ')]+'.txt'
     print file_o + ' ' + str(len(trial_info))
     
-    write_corrected(path_data, file, path, file_o, d_data)
+    write_corrected(path_data, file, path_c, file_o, d_data)
     
 
 for file in file_list:
-    
+    #file = file[:file.find(' Samples')]+'.txt'
     d_data = load_data_eye(path, file)
     
     trial_info = extract_trials_info(d_data)    
@@ -89,7 +90,7 @@ for file in file_list:
     
     #d_data['data'] = i_data[definitive_mask]
     #write_corrected(path, file, path_blink, file, d_data)
-    #write_corrected(path, file, path_i, file, d_data)
+    write_corrected(path, file, path_b_2_8, file, d_data)
 
 
     #downsampling
@@ -98,6 +99,7 @@ for file in file_list:
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
     trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
+    #p.set_title(name)
     results[name] = an
 
 
@@ -192,10 +194,10 @@ def write_deleted_trials(path_i):
     
     
 def count_good_trials():
-    count_file = open(path_i+'/count_trials_blink.txt', 'w')      
+    count_file = open(path_b_2_8+'/count_trials_blink.txt', 'w')      
     count_file.write('Subj C_inc C_tot  NC_inc NC_tot 1_inc 1_tot 2_inc 2_tot 3_inc 3_tot 4_inc 4_tot\r\n')
     for file in file_list:
-        d_data = load_data_eye(path_blink, file)
+        d_data = load_data_eye(path_b_2_8, file)
         trial_info = extract_trials_info(d_data)
         mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
         trial_info = nprec.append_fields(trial_info, 
@@ -204,7 +206,7 @@ def count_good_trials():
         task_trial = trial_info[trial_info['Condition'] != 'FIX']
         name = file.split('.')[0]
         try:
-            behavioural = open_behavioural(path_bc, name+'.xlsx')
+            behavioural = open_behavioural(path_b, name+'.xlsx')
         except IOError, err:
             print err
             continue
@@ -216,9 +218,11 @@ def count_good_trials():
         par = nprec.append_fields(paradigm[1::2],
                                      'Accuracy', 
                                      behavioural['Accuracy']).data
+        '''
         trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
         par = par[par['Accuracy'] == 1]
         behavioural = behavioural[behavioural['Accuracy'] == 1]
+        '''
         count_file.write(file+' ')
         count_file.write(str(np.count_nonzero(trial_cond['Condition'] == 'C')))
         count_file.write(' ')  
@@ -398,7 +402,7 @@ for name in results:
             i = i + 1
         a.legend(results[name][field])    
     
-    f.savefig('/home/robbis/eye/'+name+'_err.png') 
+    f.savefig('/home/robbis/'+name+'_err.png') 
 
 
 ################################################################

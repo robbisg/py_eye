@@ -131,7 +131,7 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
             splitted_data['data'][field][m_trial] = f_trial[field]
     
     
-    return splitted_data['data'][np.array(t_mask, np.bool)]
+    return splitted_data['data'][np.array(t_mask, np.bool)], 1/chunk_time
 
 def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     
@@ -149,14 +149,14 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     
     results = build_result_structure(fields, conditions)
     
-    f = plt.figure()
+    #f = plt.figure()
     
     for condition in conditions:
         i = 0
         for field in fields:
             i = i + 1
             
-            a = f.add_subplot(len(fields),1,i)
+            #a = f.add_subplot(len(fields),1,i)
             
             m_cond_trial = trial_cond[column] == condition
             cond_trial = trial_cond[m_cond_trial]
@@ -189,17 +189,17 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             
             a.plot(y_smooth, alpha=0.5)
             '''
-            a.plot(mean)
-            a.set_title(field)
-            a.legend(conditions)
-            xticks = np.arange(0, min_/sample_rate, np.around((min_/sample_rate)/7., decimals=2))
+            #a.plot(mean)
+            #a.set_title(field)
+            #a.legend(conditions)
+            #xticks = np.arange(0, min_/sample_rate, np.around((min_/sample_rate)/7., decimals=2))
             #a.set_xlim((0, min/sample_rate))
-            a.set_xticklabels(xticks)
+            #a.set_xticklabels(xticks)
             
     
     
             
-    return results
+    return results#, a
     
     
 

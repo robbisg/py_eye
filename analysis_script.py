@@ -1,7 +1,7 @@
-from eye_analysis.io import *
-from eye_analysis.polish import *
-from eye_analysis.preprocessing import *
-from eye_analysis.analysis import *
+from py_eye.io import *
+from py_eye.polish import *
+from py_eye.preprocessing import *
+from py_eye.analysis import *
 import numpy.lib.recfunctions as nprec
 
 
@@ -194,7 +194,7 @@ def count_good_trials():
     count_file = open(path_i+'/count_trials_blink.txt', 'w')      
     count_file.write('Subj C_inc C_tot  NC_inc NC_tot 1_inc 1_tot 2_inc 2_tot 3_inc 3_tot 4_inc 4_tot\r\n')
     for file in file_list:
-        d_data = load_data_eye(path_blink, file)
+        d_data = load_data_eye(path_i, file)
         trial_info = extract_trials_info(d_data)
         mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
         trial_info = nprec.append_fields(trial_info, 
@@ -203,7 +203,7 @@ def count_good_trials():
         task_trial = trial_info[trial_info['Condition'] != 'FIX']
         name = file.split('.')[0]
         try:
-            behavioural = open_behavioural(path_bc, name+'.xlsx')
+            behavioural = open_behavioural(path_b, name+'.xlsx')
         except IOError, err:
             print err
             continue

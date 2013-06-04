@@ -295,3 +295,26 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
         return trial_info
     
     
+def count_good_trials(paradigm, trial_info, **kwargs):
+    
+    for arg in kwargs:
+        if arg == 'conditions':
+            try:
+                conditions = np.int_(kwargs[arg].split(','))
+            except ValueError, err:
+                conditions = kwargs[arg].split(',')
+                continue 
+    
+    condition_list = []
+    
+    for condition in conditions:
+        
+        print condition
+        tot_trial = len(trial_info['Trial'][trial_info['Condition']==condition])
+        real_trial = len(paradigm['Trial'][paradigm['Condition']==condition])
+    
+        condition_list.append(real_trial)
+        condition_list.append(tot_trial)
+        
+    return condition_list
+    

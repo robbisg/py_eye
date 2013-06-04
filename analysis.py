@@ -131,7 +131,7 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
             splitted_data['data'][field][m_trial] = f_trial[field]
     
     
-    return splitted_data['data'][np.array(t_mask, np.bool)]
+    return splitted_data['data'][np.array(t_mask, np.bool)], 1/chunk_time
 
 def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     
@@ -164,12 +164,15 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             dim = np.array([])
             for trial in cond_trial['Trial']:
                 d_list = data[data['Trial'] == trial][field]
+                
                 if d_list.shape[0] != 0:
                     dim = np.append(dim, d_list.shape[0])
                 else:
                     continue
+                
+                dim = np.append(dim, d_list.shape[0])
                 data_list.append(d_list)
-            
+                
             min_ = np.min(dim)
             
             data_list = [d[:min_] for d in data_list]

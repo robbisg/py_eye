@@ -1,10 +1,16 @@
+#######################################################
+#     Copyright (c) 2013 Roberto Guidotti
+#
+#     See the file license.txt for copying permission.
+########################################################
+
+
 from py_eye.io import *
 from py_eye.polish import *
 from py_eye.preprocessing import *
 from py_eye.analysis import *
 import numpy.lib.recfunctions as nprec
 import itertools
-from analysis import analyze_timecourse
 
 filename = 'Sub14_1.txt'
 
@@ -75,9 +81,12 @@ for value in s:
         
         factor = np.float(conf['pupil_factor'])
         fields = conf['data_fields'].split(',')
-        d_data = pixel_to_mm(d_data, fields, factor)
         
+        d_data = pixel_to_mm(d_data, fields, factor)
+                
+        #downsampling
         d_data['data'], d_data['SampleRate'] = split_data(d_data, fields)
+        
         valid_mask = remove_outliers(d_data, **conf)
         #valid_mask = remove_outliers_gmm(d_data, **conf)
         

@@ -1,3 +1,9 @@
+#######################################################
+#     Copyright (c) 2013 Roberto Guidotti
+#
+#     See the file license.txt for copying permission.
+########################################################
+
 from py_eye.io import *
 from py_eye.polish import *
 from py_eye.preprocessing import *

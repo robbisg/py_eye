@@ -1,3 +1,10 @@
+#######################################################
+#     Copyright (c) 2013 Roberto Guidotti
+#
+#     See the file license.txt for copying permission.
+########################################################
+
+
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -56,13 +63,18 @@ def build_mask(data, trial_info, points=None):
 
 def group_function(s_data, fields, functor=np.mean):
     
-    r = dict()
+    '''
+    Make an operation suggested by @functor (DEFAULT = np.mean) to a 
+    sub serie of data
+    '''
     
+    s = dict()
+       
     for field in fields:
         
-        r[field] = functor(s_data[field], axis=1)
-    
-    return r
+        s[field] = np.array([functor(r[field]) for r in s_data], dtype = r[field].dtype)
+
+    return s
     
 
 def build_result_structure(conditions, fields):
@@ -124,10 +136,11 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
         
         d_trial = d_trial[:included_points]
         
-        d_trial = np.array(np.split(d_trial, n_chunks))
-        f_trial = functor(d_trial, fields)       
+        splitted_trial = np.split(d_trial, n_chunks)
+        f_trial = functor(splitted_trial, fields)       
         
         for field in fields:
+
             splitted_data['data'][field][m_trial] = f_trial[field]
     
     

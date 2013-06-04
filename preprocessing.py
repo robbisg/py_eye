@@ -1,3 +1,9 @@
+#######################################################
+#     Copyright (c) 2013 Roberto Guidotti
+#
+#     See the file license.txt for copying permission.
+########################################################
+
 import numpy as np
 import scipy.interpolate as sp
 from scipy import arange, array, exp

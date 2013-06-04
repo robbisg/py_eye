@@ -164,12 +164,15 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             dim = np.array([])
             for trial in cond_trial['Trial']:
                 d_list = data[data['Trial'] == trial][field]
+                
                 if d_list.shape[0] != 0:
                     dim = np.append(dim, d_list.shape[0])
                 else:
                     continue
+                
+                dim = np.append(dim, d_list.shape[0])
                 data_list.append(d_list)
-            
+                
             min_ = np.min(dim)
             
             data_list = [d[:min_] for d in data_list]

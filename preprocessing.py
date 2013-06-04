@@ -375,12 +375,17 @@ def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs)
     return c_data
 
 def remove_baseline_trial(data, valid_mask, trial_info, fields, points, condition):
+         
     
     for tr in trial_info:
         for field in fields:
             trial = np.int(np.float(tr[0]))
             
             mask_trial = data['Trial'] == trial
+            '''
+            if points == 0:
+                points = 240. #int(len(mask_trial) * 0.1)
+            '''    
             mask_condition = mask_trial * valid_mask
             data_baseline = data[field][mask_condition][:points]          
             
@@ -409,19 +414,22 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, points, condi
         for field in fields:
             trial = np.int(np.float(tr[0]))
             
+            #Get fixation data
             mask_trial = data['Trial'] == trial
+            #Get only non outlier data
             mask_baseline = mask_trial * valid_mask
             
+            #Is baseline empty?
             if np.count_nonzero(mask_baseline) == 0:
                 mask_trial = data['Trial'] == trial + 1
                 mask_baseline = mask_trial * valid_mask
                 if np.count_nonzero(mask_baseline) != 0:
                     ext_baseline = data[field][mask_baseline]
-                    mean = np.mean(ext_baseline[points:])
+                    mean = np.mean(ext_baseline[:points])
                 else:
                     mean = 0
             else:
-                mean = np.mean(data[field][mask_baseline])
+                mean = np.mean(data[field][mask_baseline][-points:])
             
               
             out = 'Trial corrected: ' + str(trial+1)
@@ -493,7 +501,7 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
             a.plot(cp_valid_mask[mask_trial])
     '''      
     
-    return [data, valid_mask]
+    return [data, valid_mask, bad_trials]
 
 def interpolate(data, valid_mask, mask_trial, fields):
     
@@ -575,8 +583,8 @@ def correct_mask(data, valid_mask, fields, points = 120):
             valid_mask[index] = True
             for field in fields:
                 data[field][index] = np.mean(data[field][mask_trial][valid_masked][-points:])
-                mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
-                data[field][index] = mean_d
+                #mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
+                #data[field][index] = mean_d
                 
         #First value of outlier vector
         
@@ -584,6 +592,8 @@ def correct_mask(data, valid_mask, fields, points = 120):
             index = np.nonzero(mask_trial)[0][0]
             valid_mask[index] = True
             for field in fields:
+                #mean_d = np.mean(data[field][valid_mask * mask_trial][:points])
+                #data[field][index] = mean_d
                 data[field][index] = np.mean(data[field][mask_trial][valid_masked][:points])
                 
     return valid_mask

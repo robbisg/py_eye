@@ -197,7 +197,7 @@ def count_good_trials():
     count_file = open(path_b_2_8+'/count_trials_blink.txt', 'w')      
     count_file.write('Subj C_inc C_tot  NC_inc NC_tot 1_inc 1_tot 2_inc 2_tot 3_inc 3_tot 4_inc 4_tot\r\n')
     for file in file_list:
-        d_data = load_data_eye(path_b_2_8, file)
+        d_data = load_data_eye(path_blink, file)
         trial_info = extract_trials_info(d_data)
         mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
         trial_info = nprec.append_fields(trial_info, 

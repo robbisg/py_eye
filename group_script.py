@@ -1,7 +1,7 @@
-from eye_analysis.io import *
-from eye_analysis.polish import *
-from eye_analysis.preprocessing import *
-from eye_analysis.analysis import *
+from io import *
+from polish import *
+from preprocessing import *
+from analysis import *
 import numpy.lib.recfunctions as nprec
 
 

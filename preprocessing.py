@@ -359,9 +359,10 @@ def window_outlier(mask, window):
     return mask
  
  
-def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs):
+def baseline_correction(data, valid_mask, trial_info, sample_rate, \
+                        type='previous', **kwargs):
     
-    points = 240
+    seconds = 0.5
     
     for arg in kwargs:    
         if arg == 'data_fields':
@@ -369,7 +370,9 @@ def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs)
         if arg == 'baseline':
             condition = kwargs[arg]
         if arg == 'baseline_size':
-            points = int(kwargs[arg])
+            seconds = int(kwargs[arg])
+    
+    points = seconds * sample_rate
     
     if type == 'previous':
         c_data = remove_baseline_previous(data, valid_mask, trial_info, 
@@ -568,12 +571,14 @@ def extrap1d(interpolator):
     return ufunclike   
 
     
-def correct_mask(data, valid_mask, fields, points = 120):
+def correct_mask(data, valid_mask, fields, sample_rate, seconds = 0.5):
     """
     Function built to prevent high peaks when interpolating data
     It fills the first and/or the last value of the trial, setting it to 0
     if the first and/or the last value of the trial is an outlier
     """
+    
+    points = seconds * sample_rate
     
     for trial in np.unique(data['Trial']):
         #Full mask of data, with True on trial

@@ -91,7 +91,8 @@ for value in s:
         #valid_mask = remove_outliers_gmm(d_data, **conf)
         
         
-        valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
+        valid_mask = correct_mask(d_data['data'], valid_mask, fields, 
+                                  d_data['SampleRate'], seconds = 0.5)
         
         #Downsampling
         
@@ -105,7 +106,7 @@ for value in s:
         
         
         d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
-                                      type='previous', **conf)
+                                      d_data['SampleRate'], type='previous', **conf)
         
         d_data['data'] = d_data['data'][definitive_mask]
         

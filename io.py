@@ -7,7 +7,7 @@
 import os
 import numpy as np
 import ConfigParser
-from polish import clear_first_trials
+from polish import clear_trials
 import numpy.lib.recfunctions as nprec
 
 def load_data_eye(path, filename):
@@ -69,8 +69,82 @@ def load_data_eye(path, filename):
     
     d_data = dict(zip(keys, value))
     
-    d_data = clear_first_trials(d_data)
+    d_data = clear_trials(d_data, [1])
 
+    return d_data
+
+def load_data_eye_v2(path, filename):
+    
+    
+    conditions = ['fix', 'wright', 'wleft', 'mright', 'mleft']
+    
+    name = os.path.join(path, filename)
+    
+    hdr = open(name, 'r')
+
+    line = ['##', 'on']
+    print 'Loading '+ filename
+    
+    c = 0
+    while line[0].find('#') != -1 :
+
+        line = hdr.readline().split('\t')
+
+        if (line[0].find('Rate:') != -1):
+            fs = float(line[1])
+        if (line[0].find('Area:')!= -1):
+            dim_x = int(line[1])
+            dim_y = int(line[2])
+        if (line[0].find('Stimulus')!= -1):
+            img_x = int(line[1])
+            img_y = int(line[2])
+        c = c + 1
+    
+    n_line = []
+    formats = []
+    for elem in line:
+        elem = elem.replace(' ', '_')
+        if elem.find('_[') != -1:
+            elem = elem[:elem.find('_[')]
+        if elem == 'Set':
+            elem = 'Trial'
+        if elem.find('\r') != -1:
+            elem = elem[:elem.find('\r')]
+            
+        n_line.append(elem)
+        
+        if elem == 'Type' or \
+           elem == 'Frame' or \
+           elem == 'Aux1':
+            formats.append('S4')
+        else:
+            formats.append('f4')
+    
+    dt = np.dtype({'names': n_line, 'formats': formats})
+    
+    rdline = hdr.readline().split('\t')
+    data_list = []
+    trial = 0
+    while rdline != ['']:
+        if rdline[1] == 'MSG':
+            for condition in conditions:
+                if rdline[3].lower().find(condition) != -1:
+                    trial = trial + 1
+            #print rdline
+        else:
+            rdline[2] = trial
+            vec = np.array(tuple(rdline), dtype=dt)
+            
+            data_list.append(vec)
+        rdline = hdr.readline().split('\t')
+    data = np.array(data_list, dtype=dt)
+            
+            
+    value = [fs, dim_x, dim_y, img_x, img_y, data]
+    keys  = ['SampleRate', 'ScreenX', 'ScreenY', 'StimX', 'StimY', 'data']    
+    
+    
+    d_data = dict(zip(keys, value))
     return d_data
 
 def get_trial(d_data, n_trial):
@@ -200,9 +274,9 @@ def read_xls_paradigm (path, filename):
     
     paradigm = np.array(zip(sh.col_values(c_index)[1:], 
                             np.int_(sh.col_values(t_index)[1:])), 
-                        dtype=[('Condition', np.str_,4),
+                        dtype=[('Condition', np.str_,10),
                                 ('Trial', np.int_, 1)])
-    
+    paradigm['Condition'] = np.core.defchararray.lower(paradigm['Condition'])
     return paradigm
 
     
@@ -219,9 +293,9 @@ def extract_trials_info(d_data):
       #  ' '+str(trial_d.T[0][len(trial_d.T[0])-1] - trial_d.T[0][0] )
         
         trial_info.append((trial, len(trial_d['Time']), \
-                           trial_d['Time'][len(trial_d['Time'])-1] - trial_d['Time'][0]))
+                           trial_d['Time'][0], trial_d['Time'][len(trial_d['Time'])-1]))
     
-    dt = np.dtype([('Trial', np.int16) , ('Length', np.int32), ('Index', np.int32)])
+    dt = np.dtype([('Trial', np.uint16) , ('Length', np.uint16), ('Begin', np.int64), ('End', np.int64)])
        
     return np.array(trial_info, dtype=dt)    
     
@@ -310,14 +384,16 @@ def count_good_trials(paradigm, trial_info, **kwargs):
             except ValueError, err:
                 conditions = kwargs[arg].split(',')
                 continue 
+        if arg == 'behavioural_field':
+            field = kwargs[arg]
     
     condition_list = []
     
     for condition in conditions:
         
         print condition
-        tot_trial = len(trial_info['Trial'][trial_info['Condition']==condition])
-        real_trial = len(paradigm['Trial'][paradigm['Condition']==condition])
+        tot_trial = len(trial_info['Trial'][trial_info[field]==condition])
+        real_trial = len(paradigm[field][paradigm[field]==condition])
     
         condition_list.append(real_trial)
         condition_list.append(tot_trial)

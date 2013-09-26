@@ -37,12 +37,15 @@ def clear_eyeblink(d_data):
     return d_data
 
 
-def clear_first_trials(d_data):
+def clear_trials(d_data, trial_list):
     
     data = d_data['data']
-    mask1 = data.T['Trial'] != 1 #First trial is unuseful
     
-    data = data[mask1]
+    mask = data.T['Trial'] != trial_list[0]
+    for trial in trial_list[1:]:
+        mask =  np.logical_and(mask, data.T['Trial'] != trial) #First trial is unuseful
+    
+    data = data[mask]
     
     d_data['data'] = data
     
@@ -151,5 +154,4 @@ def extract_trials_info(d_data):
     dt = np.dtype([('Trial', np.int16) , ('Length', np.int32), ('Index', np.int32)])
        
     return np.array(trial_info, dtype=dt)
-
-  
+      

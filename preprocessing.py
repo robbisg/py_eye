@@ -290,6 +290,8 @@ def remove_outliers(d_data, **kwargs):
         mean_mask = mean_outlier(data, std_thr, field, size_mask)
         #mean_mask = window_outlier(mean_mask, window)
         
+        
+        
         outlier_mask = outlier_mask + mean_mask + size_mask
         
     valid_mask = window_outlier(outlier_mask, window)
@@ -308,7 +310,11 @@ def size_outlier(data, max, min, field):
     mask_min = data[field] < min
     mask_max = data[field] > max   
     
-    total = mask_min + mask_max
+    
+    #print np.count_nonzero(mask_nan)
+    
+    total = mask_min + mask_max 
+    #total = np.logical_or(total, mask_nan)
         
     return total
     
@@ -359,9 +365,10 @@ def window_outlier(mask, window):
     return mask
  
  
-def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs):
+def baseline_correction(data, valid_mask, trial_info, sample_rate, \
+                        type='previous', **kwargs):
     
-    points = 240
+    seconds = 0.5
     
     for arg in kwargs:    
         if arg == 'data_fields':
@@ -369,7 +376,9 @@ def baseline_correction(data, valid_mask, trial_info, type='previous', **kwargs)
         if arg == 'baseline':
             condition = kwargs[arg]
         if arg == 'baseline_size':
-            points = int(kwargs[arg])
+            seconds = np.float(kwargs[arg])
+    
+    points = seconds * sample_rate
     
     if type == 'previous':
         c_data = remove_baseline_previous(data, valid_mask, trial_info, 
@@ -471,12 +480,13 @@ def interpolate_trial(data, trial_info, fields, valid_mask):
         outlier_length = np.count_nonzero(~valid_mask[mask_trial])
         trial_length = np.count_nonzero(mask_trial)
         
-        if (trial_length)*0.5 < outlier_length:
+        if (trial_length)*0.5 < outlier_length or trial_length < 10:
             bad_trials.append(trial)
             i = i + 1
             
             valid_mask[mask_trial] = False
         else:
+            
             try:
                 #data[mask_trial] = sklearn_fit(data, valid_mask, mask_trial, fields)
                 data[mask_trial] = interpolate(data, valid_mask, mask_trial, fields)
@@ -528,7 +538,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
         f_extra = extrap1d(f_inter)
         
         yy = f_extra(xx)
-        
+
         smooth = sp.UnivariateSpline(xx, yy, s=3)
         y_smooth = smooth(xx)
         """
@@ -568,12 +578,14 @@ def extrap1d(interpolator):
     return ufunclike   
 
     
-def correct_mask(data, valid_mask, fields, points = 120):
+def correct_mask(data, valid_mask, fields, sample_rate, seconds = 0.5):
     """
     Function built to prevent high peaks when interpolating data
     It fills the first and/or the last value of the trial, setting it to 0
     if the first and/or the last value of the trial is an outlier
     """
+    
+    points = seconds * sample_rate
     
     for trial in np.unique(data['Trial']):
         #Full mask of data, with True on trial

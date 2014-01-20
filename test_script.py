@@ -53,15 +53,15 @@ for value in s:
     max = value[0]
     min = value[1]
     
-    for file in file_list:
+    for filen in file_list:
         
-        d_data = load_data_eye(path, file)
+        d_data = load_data_eye(path, filen)
         
         trial_info = extract_trials_info(d_data)    
         conf = read_configuration(path_d, 'eye_analysis.conf')
         paradigm = read_paradigm(path_d, 'LISTA_SET.xlsx')
         
-        name = file.split('.')[0]    
+        name = filen.split('.')[0]    
         
         try:
             behavioural = open_behavioural(path_b, name+'.xlsx')
@@ -81,7 +81,7 @@ for value in s:
         factor = np.float(conf['pupil_factor'])
         fields = conf['data_fields'].split(',')
         
-        d_data = pixel_to_mm(d_data, fields, factor)
+        #d_data = pixel_to_mm(d_data, fields, factor)
                 
         #downsampling
         d_data['data'], d_data['SampleRate'] = split_data(d_data, fields)
@@ -94,8 +94,8 @@ for value in s:
         #valid_mask = remove_outliers_gmm(d_data, **conf)
         
         
-        valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
-        z_data = copy.copy(d_data)
+        valid_mask = correct_mask(d_data['data'], valid_mask, fields, 
+                                  d_data['SampleRate'], seconds = 0.5)
         
         try:
             [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
@@ -107,7 +107,7 @@ for value in s:
         
         
         d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
-                                      type='previous', **conf)
+                                      d_data['SampleRate'], type='previous', **conf)
         
         d_data['data'] = d_data['data'][definitive_mask]
         
@@ -190,10 +190,10 @@ for value in s:
                             sheet.write(3+i, 0, float(time[i]))
                         sheet.write(3+i, r_pos, float(r_data[i]))
                     flag = 1
-    filename = 'wbook_simon_'+str(max)+'_'+str(min)+'_downsampl_50Hz.xls'
+    filename = 'wbook_simon_bologna_60Hz.xls'
     wbook.save('/home/robbis/eye/'+filename)
     
-    filename = 'trial_count_'+str(max)+'_'+str(min)+'_downsampl_50Hz.txt'
+    filename = 'trial_count_simon_bologna_60Hz.txt'
     file_trial = open('/home/robbis/eye/'+filename, 'w')
     
     conditions = []
@@ -205,7 +205,7 @@ for value in s:
 
     file_trial.write('Subj\t')
     for cond in conditions:
-        file_trial.write(str(cond))
+        cond = str(cond)
         file_trial.write('\t'+str(cond)+'_tot')
         file_trial.write('\t')
     file_trial.write('\n\r')
@@ -269,83 +269,93 @@ for file in file_list:
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
 
     results[name] = an       
+    #################################################
+results = dict()
+t_count = dict()   
     
-#########################################################################à
-
-
-for file in file_list:
+for filen in filelist:
+    
+    d_data = load_data_eye_v2(path, filen)
+    d_data = clear_trials(d_data, [0])
+    trial_info = extract_trials_info(d_data)    
+    conf = read_configuration(path, 'experiment.conf')
+    
+    name = filen.split('.')[0]    
+    
+    if name == 'Sub3':
+        fn_para = 'LISTA_SET_s3.xlsx'
+    else:
+        fn_para = 'LISTA_SET_dropped_trial.xlsx'
+    paradigm = read_paradigm(path, fn_para)
+    
+    try:
+        behavioural = open_behavioural_v2(path, name+'.xls')
+    except IOError,err:
+        print str(err)
         
-        d_data = load_data_eye(path, file)
-        d_data['data'] = d_data['data'][d_data['data']['Trial'] <= 21]
-        trial_info = extract_trials_info(d_data)    
-        conf = read_configuration(path_d, 'eye_analysis.conf')
-        paradigm = read_paradigm(path_d, 'LISTA_SET.xlsx')
-        
-        name = file.split('.')[0]    
-        
-        try:
-            behavioural = open_behavioural(path_b, name+'.xlsx')
-        except IOError,err:
-            print str(err)
+    trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
+    
+    #####################################################
+      
+    d_data, field = merge_fields(d_data, **conf)
+    
+    conf['data_fields'] = field
+    
+    d_data['data'][field][np.isnan(d_data['data'][field])] = 0.
+    '''
+    conf['min_pupil_size'] = min
+    conf['max_pupil_size'] = max
+    
+    print conf['max_pupil_size'], conf['min_pupil_size']
+    '''
+    factor = np.float(conf['pupil_factor'])
+    fields = conf['data_fields'].split(',')
+    
+    #d_data = pixel_to_mm(d_data, fields, factor)
             
-        trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
-        
-        #####################################################
-          
-        d_data, field = merge_fields(d_data, **conf)
-        
-        conf['data_fields'] = field
-        conf['min_pupil_size'] = min
-        conf['max_pupil_size'] = max
-        
-        print conf['max_pupil_size'], conf['min_pupil_size']
-        
-        factor = np.float(conf['pupil_factor'])
-        fields = conf['data_fields'].split(',')
-        
-        d_data = pixel_to_mm(d_data, fields, factor)
-                
-        #downsampling
-        d_data['data'], d_data['SampleRate'] = split_data(d_data, fields)
-        
-        valid_mask = remove_outliers(d_data, **conf)
-        #valid_mask = remove_outliers_gmm(d_data, **conf)
-        
-        
-        valid_mask = correct_mask(d_data['data'], valid_mask, fields, 120.)
-        
-        #Downsampling
-        
-        try:
-            [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
-        except ValueError, err:
-            print str(err)
-            #continue
-        
-        
-        
-        
-        d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
-                                      type='previous', **conf)
-        
-        d_data['data'] = d_data['data'][definitive_mask]
-        
-        #d_data['data'] = i_data[definitive_mask]
-        #write_corrected(path, file, path_blink, file, d_data)
-        #write_corrected(path, file, path_i, file, d_data)
+    #downsampling
+    #d_data['data'], d_data['SampleRate'] = split_data(d_data, fields)
+    
+    valid_mask = remove_outliers(d_data, **conf)
+    #valid_mask = remove_outliers_gmm(d_data, **conf)
     
     
-        #downsampling
-        
-                
-        trial_info = extract_trials_info(d_data)
-        trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
-        trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
-        
-        t_count[name] = count_good_trials(paradigm, trial_info, **conf)
-        
-        an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
-        results[name] = an
-        
-        sample_rate = d_data['SampleRate']
-        del d_data, i_data
+    valid_mask = correct_mask(d_data['data'], valid_mask, fields, 
+                              d_data['SampleRate'], seconds = 0.5)
+    
+    #Downsampling
+    
+    try:
+        [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
+    except ValueError, err:
+        print str(err)
+        #continue
+    
+    
+    
+    
+    d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
+                                  d_data['SampleRate'], type='previous', **conf)
+    
+    d_data['data'] = d_data['data'][definitive_mask]
+    
+    #d_data['data'] = i_data[definitive_mask]
+    #write_corrected(path, file, path_blink, file, d_data)
+    #write_corrected(path, file, path_i, file, d_data)
+
+
+    #downsampling
+    
+            
+    trial_info = extract_trials_info(d_data)
+    
+    trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
+    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
+    trial_cond = trial_cond[trial_cond['Length'] > 100]
+    trial_cond = trial_cond[trial_cond['Trial'] > 16]
+    
+    t_count[name] = count_good_trials(behavioural, trial_cond, **conf)
+    
+    an, plot = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
+    results[name] = an
+    

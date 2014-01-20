@@ -98,10 +98,11 @@ def open_behavioural(path, subj):
     sh = book.sheet_by_index(0)
     
     behavioural = np.array(zip(
-                               sh.col_values(9)[1:], 
-                     np.float_(sh.col_values(17)[1:]),
-                       np.int_(sh.col_values(8)[1:]),
-                       np.int_([(int(x) if x else 0) for x in sh.col_values(23)[1:]])
+                               sh.col_values(9)[1:], #COL. J
+                     #np.float_(sh.col_values(17)[1:]), #COL. R
+                     np.float_(sh.col_values(24)[1:]), #COL. Y
+                       np.int_(sh.col_values(8)[1:]), #COL. I
+                       np.int_([(int(x) if x else 0) for x in sh.col_values(23)[1:]]) #COL. X
                             ), 
                         dtype=[('Condition', np.str_,4),
                                ('Accuracy', np.int_, 1),
@@ -152,10 +153,10 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
         d_trial = data[m_trial]
         n_chunks = np.floor(len(d_trial)/chunk_points)
         
-        included_points = n_chunks * chunk_points
+        included_points = np.int(n_chunks * chunk_points)
         trial_first = np.nonzero(m_trial)[0][0]
         
-        m_trial[trial_first+n_chunks:] = False
+        m_trial[trial_first+int(n_chunks):] = False
         t_mask = t_mask + m_trial
         
         d_trial = d_trial[:included_points]

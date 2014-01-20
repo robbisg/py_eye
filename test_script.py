@@ -18,7 +18,7 @@ filename = 'Sub14_1.txt'
 path_d = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/'
 path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/'
 path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Simon_Task.txt/corrected/'
-path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data/'
+path_b = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/Behavioural Data New/'
 path_rem_bi = '/media/DATA/eye_analysis/interp_baseline/'
 path_f = '/home/robbis/eye/fitted/'
 path_i = '/home/robbis/eye/interp_baseline/'
@@ -88,7 +88,7 @@ for value in s:
         
         #Where is used??
         conf['window'] = d_data['SampleRate'] * 0.1
-        conf['baseline_size'] = d_data['SampleRate'] * float(conf['baseline_size'])
+        #conf['baseline_size'] = d_data['SampleRate'] * float(conf['baseline_size'])
         
         valid_mask = remove_outliers(d_data, **conf)
         #valid_mask = remove_outliers_gmm(d_data, **conf)
@@ -190,11 +190,11 @@ for value in s:
                             sheet.write(3+i, 0, float(time[i]))
                         sheet.write(3+i, r_pos, float(r_data[i]))
                     flag = 1
-    filename = 'wbook_simon_bologna_60Hz.xls'
-    wbook.save('/home/robbis/eye/'+filename)
+    filename = 'wbook_simon_oslo_.xls'
+    wbook.save('/media/DATA/eye/'+filename)
     
-    filename = 'trial_count_simon_bologna_60Hz.txt'
-    file_trial = open('/home/robbis/eye/'+filename, 'w')
+    filename = 'trial_count_simon_oslo_.txt'
+    file_trial = open('/media/DATA/eye/'+filename, 'w')
     
     conditions = []
     try:

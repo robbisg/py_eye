@@ -350,8 +350,8 @@ def window_outlier(mask, window):
     '''
     
     for index in np.nonzero(np.int_(mask))[0]:
-        begin = index - window
-        end = index + window
+        begin = int(index - window)
+        end = int(index + window)
         
         if begin < 0:
             begin = 0
@@ -585,7 +585,7 @@ def correct_mask(data, valid_mask, fields, sample_rate, seconds = 0.5):
     if the first and/or the last value of the trial is an outlier
     """
     
-    points = seconds * sample_rate
+    points = np.int(seconds * sample_rate)
     
     for trial in np.unique(data['Trial']):
         #Full mask of data, with True on trial

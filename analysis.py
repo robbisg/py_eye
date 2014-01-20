@@ -100,11 +100,14 @@ def open_behavioural(path, subj):
     behavioural = np.array(zip(
                                sh.col_values(9)[1:], 
                      np.float_(sh.col_values(17)[1:]),
-                       np.int_(sh.col_values(8)[1:])
+                       np.int_(sh.col_values(8)[1:]),
+                       np.int_([(int(x) if x else 0) for x in sh.col_values(23)[1:]])
                             ), 
                         dtype=[('Condition', np.str_,4),
                                ('Accuracy', np.int_, 1),
-                               ('Combination', np.int_, 1),])
+                               ('Combination', np.int_, 1),
+                               ('Combination_New', np.int_, 1)]
+                           )
     
     return behavioural
 

@@ -96,14 +96,14 @@ for file in file_list:
     
     #d_data['data'] = i_data[definitive_mask]
     #write_corrected(path, file, path_blink, file, d_data)
-    write_corrected(path, file, path_b_2_8, file, d_data)
+    #write_corrected(path, file, path_b_2_8, file, d_data)
 
 
     #downsampling
     #an = mean_analysis(d_data['data'], trial_cond, **conf)
     trial_info = extract_trials_info(d_data)
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
-    trial_cond = trial_cond[trial_cond['Accuracy'] == 1]
+    trial_cond = trial_cond[trial_cond['Accuracy'] == 0]
     an = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     #p.set_title(name)
     results[name] = an

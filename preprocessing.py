@@ -529,7 +529,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
         
         yy = f_extra(xx)
         
-        smooth = sp.UnivariateSpline(xx, yy, s=5)
+        smooth = sp.UnivariateSpline(xx, yy, s=3)
         y_smooth = smooth(xx)
         """
         try:

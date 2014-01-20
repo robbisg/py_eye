@@ -290,9 +290,10 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
         trial_task_info = trial_info[trial_info['Condition'] != baseline_condition]
     
         trial_cond = nprec.append_fields(trial_task_info,
-                                     ['Accuracy', 'Combination'], 
+                                     ['Accuracy', 'Combination', 'Combination_New'], 
                                      [behavioural['Accuracy'][m], 
-                                     behavioural['Combination'][m]]).data
+                                     behavioural['Combination'][m],
+                                     behavioural['Combination_New'][m]]).data
                                      
         return trial_cond, trial_info
     
@@ -301,7 +302,7 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
         return trial_info
     
     
-def count_good_trials(paradigm, trial_info, **kwargs):
+def count_good_trials(behavioural, trial_cond, **kwargs):
     
     for arg in kwargs:
         if arg == 'conditions':
@@ -309,15 +310,17 @@ def count_good_trials(paradigm, trial_info, **kwargs):
                 conditions = np.int_(kwargs[arg].split(','))
             except ValueError, err:
                 conditions = kwargs[arg].split(',')
-                continue 
+                continue
+        if arg == 'behavioural_field':
+            field = kwargs[arg]
     
     condition_list = []
     
     for condition in conditions:
         
         print condition
-        tot_trial = len(trial_info['Trial'][trial_info['Condition']==condition])
-        real_trial = len(paradigm['Trial'][paradigm['Condition']==condition])
+        tot_trial = len(trial_cond[trial_cond[field]==condition])
+        real_trial = len(behavioural[behavioural[field]==condition])
     
         condition_list.append(real_trial)
         condition_list.append(tot_trial)

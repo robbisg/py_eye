@@ -9,6 +9,7 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as sp
+from scipy.stats.stats import mode
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
@@ -89,7 +90,7 @@ def build_result_structure(conditions, fields):
     return r
 
 
-def open_behavioural(path, subj):
+def open_behavioural_old(path, subj):
     
     import xlrd
     fn = os.path.join(path, subj)
@@ -113,24 +114,75 @@ def open_behavioural(path, subj):
     behavioural['Condition'] = np.core.defchararray.lower(behavioural['Condition'])
     return behavioural
 
-def open_behavioural_v2(path, subj):
+def open_behavioural(path, subj, **kwargs):
+    ############# BOLOGNA ##################
+    
+    dropped_trials = []
+    behavioural_data = []
+    for arg in kwargs:
+        if arg == 'dropped_trials':
+            dropped_trials = np.int_(kwargs[arg].split(','))
+        if arg == 'behavioural_data':
+            behavioural_data = kwargs[arg].split(',')
     
     import xlrd
     fn = os.path.join(path, subj)
     
-    book = xlrd.open_workbook(fn)
-    sh = book.sheet_by_index(0)
+    book = xlrd.open_workbook(fn) #Open workbook
+    sh = book.sheet_by_index(0) #Choose sheet
     
+    labels = sh.row_values(0)
+    labels = [unicode.lower(l) for l in labels]
+    l_array = np.array(labels, dtype = np.str)
+    
+    indexes = []
+    data_tot = []
+    dtype = []
+    for field in behavioural_data:
+        index = np.nonzero(l_array == str.lower(field))[0][0]
+        
+        data = sh.col_values(int(index))[1:]
+        
+        type = mode([x.__class__ for x in data])[0][0]
+        if type == unicode:
+            data = [x.__class__.lower(x) for x in data]
+            t = (field, np.str_, 15)
+        else:
+            data = [(int(x) if x else 0) for x in data]
+            t = (field, np.int_, 1)
+        
+        dtype.append(t)
+        data_tot.append(data)
+    
+    data_tot.append(range(1,len(sh.col_values(0)[1:])+1))
+    dtype.append(('TrialNo.', np.int_, 1))
+    
+    '''    
     behavioural = np.array(zip(
-                               sh.col_values(14)[1:], #Condition Label
-                     np.float_(sh.col_values(6)[1:]), #Accuracy
-                       np.int_(sh.col_values(3)[1:]) #Combination
+                               sh.col_values(6)[1:], #Condition Label
+                               sh.col_values(19)[1:],
+                               np.float_([(int(x) if x else 0) for x in sh.col_values(18)[1:]]), #Accuracy
+                               np.int_([(int(x) if x else 0) for x in sh.col_values(4)[1:]]),
+                               np.arange(len(sh.col_values(0)[1:]))+1 #Combination
                             ), 
-                        dtype=[('Condition', np.str_,10),
-                               ('Accuracy', np.int_, 1),
-                               ('Combination', np.int_, 1),])
+                           dtype=[('Condition', np.str_,2),
+                                  ('SlideImage', np.str_,10),
+                                  ('Accuracy', np.int_, 1),
+                                  ('Combination', np.int_, 1),
+                                  ('TrialNo.', np.int_, 1)]
+                           )
+    '''
     
-    behavioural['Condition'] = np.core.defchararray.lower(behavioural['Condition'])
+    behavioural = np.array(zip(*data_tot), dtype=dtype)
+    
+    
+    if len(dropped_trials) > 0:
+        mask = 0
+        for trial in dropped_trials:
+            mask = mask + np.int_(behavioural['TrialNo.'] == trial)
+    
+        behavioural = behavioural[~np.bool_(mask)]
+    
     return behavioural
 
 def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
@@ -211,7 +263,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
                 dim = np.append(dim, d_list.shape[0])
                 data_list.append(d_list)
                 
-            min_ = np.min(dim)
+            min_ = np.int(np.min(dim))
             
             data_list = [d[:min_] for d in data_list]
 

@@ -264,9 +264,9 @@ def remove_outliers(d_data, **kwargs):
     
     for arg in kwargs:
         if arg == 'max_pupil_size':
-            max = np.float(kwargs[arg])
+            max_ = np.float(kwargs[arg])
         if arg == 'min_pupil_size':
-            min = np.float(kwargs[arg])
+            min_ = np.float(kwargs[arg])
         if arg == 'std_thr':
             std_thr = np.float(kwargs[arg])        
         if arg == 'data_fields':
@@ -284,7 +284,7 @@ def remove_outliers(d_data, **kwargs):
     for field in fields:
         
         
-        size_mask = size_outlier(data, max, min, field)
+        size_mask = size_outlier(data, max_, min_, field)
         #size_mask = window_outlier(size_mask, window)
         
         mean_mask = mean_outlier(data, std_thr, field, size_mask)
@@ -304,11 +304,11 @@ def remove_outliers(d_data, **kwargs):
     return np.array(valid_mask, dtype=np.bool)
     
 
-def size_outlier(data, max, min, field):
+def size_outlier(data, max_v, min_v, field):
     
       
-    mask_min = data[field] < min
-    mask_max = data[field] > max   
+    mask_min = data[field] < min_v
+    mask_max = data[field] > max_v   
     
     
     #print np.count_nonzero(mask_nan)
@@ -332,8 +332,8 @@ def mean_outlier(data, std_thr, field, p_mask):
         std = np.std(data[field][mask][mask_trial_masked])
 
         mask_m = size_outlier(data=data[mask], 
-                              max=mean+(std*std_thr), 
-                              min=mean-(std*std_thr), 
+                              max_v=mean+(std*std_thr), 
+                              min_v=mean-(std*std_thr), 
                               field=field)
         
         t_mask = np.hstack((t_mask, mask_m))
@@ -423,8 +423,8 @@ def remove_baseline_previous(data, valid_mask, trial_info, fields, points, condi
     
     #c_data = data.copy()
     
-    fix = trial_info[trial_info['Condition'] == condition]
-
+    fix = trial_info[trial_info['Label'] == condition]
+    points = np.int(points)
     for tr in fix:   
         for field in fields:
             trial = np.int(np.float(tr[0]))
@@ -539,7 +539,7 @@ def interpolate(data, valid_mask, mask_trial, fields):
         
         yy = f_extra(xx)
 
-        smooth = sp.UnivariateSpline(xx, yy, s=3)
+        smooth = sp.UnivariateSpline(xx, yy, s=5)
         y_smooth = smooth(xx)
         """
         try:

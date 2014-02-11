@@ -20,7 +20,7 @@ file_list = os.listdir(path)
 file_list.sort()
 results = []
 results = dict()
-
+t_count = dict()
 subject_list = np.loadtxt(path+'subject_list.txt', dtype=np.str, delimiter=',')
     
 for subj in subject_list:
@@ -167,10 +167,10 @@ for name, sheet in sheets.iteritems():
                         sheet.write(3+i, 0, float(time[i]))
                     sheet.write(3+i, r_pos, float(r_data[i]))
                 flag = 1
-filename = 'wbook_simon_bologna_.xls'
+filename = 'wbook_simon_bologna_comb.xls'
 wbook.save('/media/DATA/eye/'+filename)
 
-filename = 'trial_count_simon_bologna_.txt'
+filename = 'trial_count_simon_bologna_comb.txt'
 file_trial = open('/media/DATA/eye/'+filename, 'w')
 
 conditions = []

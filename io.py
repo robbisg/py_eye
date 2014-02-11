@@ -73,10 +73,15 @@ def load_data_eye(path, filename):
 
     return d_data
 
-def load_data_eye_v2(path, filename):
+def load_data_eye_v2(path, filename, **kwargs):
     
-    
+        
     conditions = ['fix', 'wright', 'wleft', 'mright', 'mleft']
+    
+    for arg in kwargs:
+        if arg == 'valid_msg':
+            conditions = kwargs[arg].split(',')
+
     
     name = os.path.join(path, filename)
     
@@ -280,7 +285,7 @@ def read_xls_paradigm (path, filename, **kwargs):
     
     paradigm = np.array(zip(sh.col_values(c_index)[1:], 
                             np.int_(sh.col_values(t_index)[1:])), 
-                        dtype=[('Label', np.str_,10),
+                        dtype=[('Label', np.str_,20),
                                 ('Trial', np.int_, 1)])
     
     paradigm['Label'] = np.core.defchararray.lower(paradigm['Label'])
@@ -294,6 +299,7 @@ def read_xls_paradigm (path, filename, **kwargs):
             mask = mask + np.int_(paradigm['Trial'] == missing_trial - 1)
     
             paradigm = paradigm[~np.bool_(mask)]
+            mask = 0
             paradigm['Trial'] = np.arange(len(paradigm)) + 1
     
     

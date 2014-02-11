@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as sp
 from scipy.stats.stats import mode
+from sklearn.linear_model import Ridge
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
@@ -132,7 +133,7 @@ def open_behavioural(path, subj, **kwargs):
     sh = book.sheet_by_index(0) #Choose sheet
     
     labels = sh.row_values(0)
-    labels = [unicode.lower(l) for l in labels]
+    labels = [unicode.lower(unicode(l)) for l in labels]
     l_array = np.array(labels, dtype = np.str)
     
     indexes = []
@@ -240,7 +241,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     results = build_result_structure(fields, conditions)
     
     f = plt.figure()
-    
+    ridge = Ridge()
     for condition in conditions:
         i = 0
         for field in fields:
@@ -273,15 +274,16 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             
             results[field][condition]['mean'] = mean
             results[field][condition]['std'] = std
-            '''
+            #
             xx = np.linspace(0, len(mean), len(mean))
             yy = mean
             
-            smooth = sp.UnivariateSpline(xx, yy, s=1)
-            y_smooth = smooth(xx)
+            ridge.fit(np.vander(xx, 11), yy)
             
-            a.plot(y_smooth, alpha=0.5)
-            '''
+            y_smooth = ridge.predict(np.vander(xx, 11))
+            
+            a.plot(y_smooth, alpha=0.5, linestyle='--')
+            #
             a.plot(mean)
             a.set_title(field)
             a.legend(conditions)

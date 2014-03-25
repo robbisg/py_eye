@@ -130,12 +130,13 @@ def load_data_eye_v2(path, filename, **kwargs):
     rdline = hdr.readline().split('\t')
     data_list = []
     trial = 0
+    msg_list = []
     while rdline != ['']:
         if rdline[1] == 'MSG':
             for condition in conditions:
                 if rdline[3].lower().find(condition) != -1:
                     trial = trial + 1
-            #print rdline
+            msg_list.append(rdline)
         else:
             rdline[2] = trial
             vec = np.array(tuple(rdline), dtype=dt)
@@ -150,7 +151,7 @@ def load_data_eye_v2(path, filename, **kwargs):
     
     
     d_data = dict(zip(keys, value))
-    return d_data
+    return d_data, msg_list
 
 def get_trial(d_data, n_trial):
     

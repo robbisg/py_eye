@@ -7,9 +7,10 @@ import itertools
 import copy
 
 
-path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/'
-path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/PupillaryData/'
-path_behavioural = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/BehaviouralDataNew/'
+
+path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/'
+#path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/PupillaryData/'
+#path_behavioural = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/BehaviouralDataNew/'
 
 
 conf = read_configuration(path, 'experiment.conf')
@@ -25,10 +26,21 @@ subject_list = np.loadtxt(path+'subject_list.txt', dtype=np.str, delimiter=',')
     
 for subj in subject_list:
     
-    d_data, _ = load_data_eye_v2(path_data, subj[0])
+    path_data = os.path.join(path, subj[2], 'PupillaryData')
+    path_behavioural = os.path.join(path, subj[2], 'BehaviouralDataNew')
+    
+    d_data, _ = load_data_eye_v2(path_data, subj[0], **conf)
     d_data['data'] = d_data['data'][d_data['data']['Trial']!=0]
-    trial_info = extract_trials_info(d_data)    
+    trial_info = extract_trials_info(d_data)
+    
     conf = read_configuration(path, 'experiment.conf')
+    
+    if subj[2].find('New') != -1:
+        d_data = correct_fixation(d_data, trial_info, 0.2)
+        trial_info = extract_trials_info(d_data)
+        print trial_info['Length'][::2]
+    
+    
     paradigm_fn = 'LISTA_TRIAL_'+subj[1]+'.xlsx'
     paradigm = read_paradigm(path, paradigm_fn, **conf)
     
@@ -46,11 +58,11 @@ for subj in subject_list:
     
     
     #####################################################
-    '''  
-    d_data, field = merge_fields(d_data, **conf)
+      
+    #d_data, field = merge_fields(d_data, **conf)
     
-    conf['data_fields'] = field
-    '''
+    #conf['data_fields'] = field
+    
     factor = np.float(conf['pupil_factor'])
     fields = conf['data_fields'].split(',')
     
@@ -96,11 +108,11 @@ for subj in subject_list:
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
     
     trial_cond = trial_cond[trial_cond['correctedtrial'] == 1]
-    trial_cond = trial_cond[trial_cond['Trial'] > 16]
+    trial_cond = trial_cond[trial_cond['Trial'] > 24]
     
     t_count[name] = count_good_trials(behavioural, trial_cond, **conf)
     
-    trial_cond = trial_cond[trial_cond['Length'] > 100]
+    trial_cond = trial_cond[trial_cond['Length'] > 110]
     
     an, _ = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     results[name] = an
@@ -167,10 +179,10 @@ for name, sheet in sheets.iteritems():
                         sheet.write(3+i, 0, float(time[i]))
                     sheet.write(3+i, r_pos, float(r_data[i]))
                 flag = 1
-filename = 'wbook_simon_bologna_c-nc_mm.xls'
+filename = 'wbook_simon_bologna_uditivo_c-nc_new_subj.xls'
 wbook.save('/media/DATA/eye/'+filename)
 
-filename = 'trial_count_simon_bologna_c-nc_mm.txt'
+filename = 'trial_count_simon_bologna_uditivo_c-nc_new_subj.txt'
 file_trial = open('/media/DATA/eye/'+filename, 'w')
 
 conditions = []
@@ -196,3 +208,13 @@ for key in t_count.keys():
     file_trial.write('\n\r')
 
 file_trial.close()
+
+for subj in subject_list:
+    #path_data = os.path.join(path, subj[2], 'PupillaryData')
+    #d_data, msg_list = load_data_eye_v2(path_data, subj[0], **conf)
+    d_data, msg_list = load_data_eye_v2(path_data, subj, **conf)
+    trial_info = extract_trials_info(d_data) 
+    trial_info = trial_info[:len(msg_list)]
+    msg_list = msg_list[:len(trial_info)]
+    vec_out = np.vstack((trial_info['Length']/60., trial_info['Length'], np.array(msg_list).T[3])).T
+    np.savetxt(file('/media/DATA/eye/ud_'+subj[0], 'w'), vec_out, fmt='%s\t')

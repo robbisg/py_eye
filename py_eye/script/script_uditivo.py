@@ -212,9 +212,15 @@ file_trial.close()
 for subj in subject_list:
     #path_data = os.path.join(path, subj[2], 'PupillaryData')
     #d_data, msg_list = load_data_eye_v2(path_data, subj[0], **conf)
+    
     d_data, msg_list = load_data_eye_v2(path_data, subj, **conf)
+    hz = np.float(d_data['SampleRate'])
     trial_info = extract_trials_info(d_data) 
-    trial_info = trial_info[:len(msg_list)]
+    trial_info = trial_info[1:len(msg_list)]
     msg_list = msg_list[:len(trial_info)]
-    vec_out = np.vstack((trial_info['Length']/60., trial_info['Length'], np.array(msg_list).T[3])).T
-    np.savetxt(file('/media/DATA/eye/ud_'+subj[0], 'w'), vec_out, fmt='%s\t')
+    vec_out = np.vstack((trial_info['Length']/hz, trial_info['Length'], np.array(msg_list))).T
+    np.savetxt(file('/media/DATA/eye/oslo_14_200ms_'+subj[:subj.find(' ')]+'.txt', 'w'), vec_out, fmt='%s\t')
+    print str(np.float_(vec_out[1::4].T[0]).mean())
+    print str(np.float_(vec_out[2::4].T[0]).mean())
+    print str(np.float_(vec_out[3::4].T[0]).mean())
+    print str(np.float_(vec_out[4::4].T[0]).mean())

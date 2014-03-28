@@ -136,7 +136,8 @@ def load_data_eye_v2(path, filename, **kwargs):
             for condition in conditions:
                 if rdline[3].lower().find(condition) != -1:
                     trial = trial + 1
-            msg_list.append(rdline)
+                    message = rdline[3]
+                    msg_list.append(message.lstrip('# Message: '))
         else:
             rdline[2] = trial
             vec = np.array(tuple(rdline), dtype=dt)

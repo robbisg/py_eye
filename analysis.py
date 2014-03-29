@@ -120,13 +120,16 @@ def open_behavioural_v2(path, subj):
     behavioural = np.array(zip(
                                sh.col_values(14)[1:], #Condition Label
                      np.float_(sh.col_values(6)[1:]), #Accuracy
-                       np.int_(sh.col_values(3)[1:]) #Combination
+                       sh.col_values(16)[1:] #Combination
                             ), 
                         dtype=[('Condition', np.str_,10),
                                ('Accuracy', np.int_, 1),
-                               ('Combination', np.int_, 1),])
+                               ('Combination', np.str_, 6),])
+                                #'Combination', np.int_, 1),])
     
     behavioural['Condition'] = np.core.defchararray.lower(behavioural['Condition'])
+    behavioural['Combination'] = np.core.defchararray.lower(behavioural['Combination'])
+    
     return behavioural
 
 def split_data(d_data, fields, chunk_time=0.02, functor=group_function):

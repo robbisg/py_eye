@@ -73,10 +73,15 @@ def load_data_eye(path, filename):
 
     return d_data
 
-def load_data_eye_v2(path, filename):
+def load_data_eye_v2(path, filename, **kwargs):
     
-    
+        
     conditions = ['fix', 'wright', 'wleft', 'mright', 'mleft']
+    
+    for arg in kwargs:
+        if arg == 'valid_msg':
+            conditions = kwargs[arg].split(',')
+
     
     name = os.path.join(path, filename)
     
@@ -125,12 +130,14 @@ def load_data_eye_v2(path, filename):
     rdline = hdr.readline().split('\t')
     data_list = []
     trial = 0
+    msg_list = []
     while rdline != ['']:
         if rdline[1] == 'MSG':
             for condition in conditions:
                 if rdline[3].lower().find(condition) != -1:
                     trial = trial + 1
-            #print rdline
+                    message = rdline[3]
+                    msg_list.append(message.lstrip('# Message: '))
         else:
             rdline[2] = trial
             vec = np.array(tuple(rdline), dtype=dt)
@@ -145,7 +152,7 @@ def load_data_eye_v2(path, filename):
     
     
     d_data = dict(zip(keys, value))
-    return d_data
+    return d_data, msg_list
 
 def get_trial(d_data, n_trial):
     
@@ -243,12 +250,12 @@ def read_configuration(path, conf_path):
     return dict(configuration)   
 
 
-def read_paradigm(path, filename):
+def read_paradigm(path, filename, **kwargs):
     
     ext = filename.split('.')[1]
 
     if ext.find('xlsx') != -1:
-        paradigm = read_xls_paradigm(path, filename)
+        paradigm = read_xls_paradigm(path, filename, **kwargs)
     elif ext.find('txt') != -1:
         paradigm = read_txt(path, filename)
     else:
@@ -257,9 +264,14 @@ def read_paradigm(path, filename):
     
     return paradigm 
 
-def read_xls_paradigm (path, filename):
+def read_xls_paradigm (path, filename, **kwargs):
     
     import xlrd
+    
+    dropped_trials = []
+    for arg in kwargs:
+        if arg == 'dropped_trials':
+            dropped_trials = np.int_(kwargs[arg].split(','))
     
     fn = os.path.join(path, filename)
     
@@ -267,6 +279,7 @@ def read_xls_paradigm (path, filename):
     sh = book.sheet_by_index(0)
     
     labels = sh.row_values(0)
+
     l_array = np.array(labels, dtype = np.str)
     
     t_index = np.nonzero(l_array == str.upper('Trial'))[0]
@@ -274,9 +287,24 @@ def read_xls_paradigm (path, filename):
     
     paradigm = np.array(zip(sh.col_values(c_index)[1:], 
                             np.int_(sh.col_values(t_index)[1:])), 
-                        dtype=[('Condition', np.str_,10),
+                        dtype=[('Label', np.str_,20),
                                 ('Trial', np.int_, 1)])
-    paradigm['Condition'] = np.core.defchararray.lower(paradigm['Condition'])
+    
+    paradigm['Label'] = np.core.defchararray.lower(paradigm['Label'])
+    
+    
+    if len(dropped_trials) > 0:
+        mask = 0
+        for trial in dropped_trials:
+            missing_trial = trial * 2
+            mask = mask + np.int_(paradigm['Trial'] == missing_trial)
+            mask = mask + np.int_(paradigm['Trial'] == missing_trial - 1)
+    
+            paradigm = paradigm[~np.bool_(mask)]
+            mask = 0
+            paradigm['Trial'] = np.arange(len(paradigm)) + 1
+    
+    
     return paradigm
 
     
@@ -348,11 +376,11 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
     mask_blink_outlier = np.in1d(paradigm['Trial'], trial_info['Trial'])
         
     trial_info = nprec.append_fields(trial_info, 
-                                     'Condition', 
-                                     paradigm['Condition'][mask_blink_outlier]).data
+                                     'Label', 
+                                     paradigm['Label'][mask_blink_outlier]).data
 
     
-    mask_task = paradigm['Condition'] != baseline_condition
+    mask_task = paradigm['Label'] != baseline_condition
         
     
     print 'Trials no.' + str(len(trial_info))
@@ -361,13 +389,12 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
         m = mask_task * mask_blink_outlier
         m = m[1::2]
     
-        trial_task_info = trial_info[trial_info['Condition'] != baseline_condition]
+        trial_task_info = trial_info[trial_info['Label'] != baseline_condition]
     
         trial_cond = nprec.append_fields(trial_task_info,
-                                     ['Accuracy', 'Combination'], 
-                                     [behavioural['Accuracy'][m], 
-                                     behavioural['Combination'][m]]).data
-                                     
+                                     behavioural.dtype.names, 
+                                     [behavioural[b][m] for b in behavioural.dtype.names]).data
+        
         return trial_cond, trial_info
     
     else:
@@ -375,7 +402,7 @@ def merge_paradigm(trial_info, paradigm, behavioural=None, **conf):
         return trial_info
     
     
-def count_good_trials(paradigm, trial_info, **kwargs):
+def count_good_trials(behavioural, trial_cond, **kwargs):
     
     for arg in kwargs:
         if arg == 'conditions':
@@ -383,7 +410,7 @@ def count_good_trials(paradigm, trial_info, **kwargs):
                 conditions = np.int_(kwargs[arg].split(','))
             except ValueError, err:
                 conditions = kwargs[arg].split(',')
-                continue 
+                continue
         if arg == 'behavioural_field':
             field = kwargs[arg]
     
@@ -392,8 +419,8 @@ def count_good_trials(paradigm, trial_info, **kwargs):
     for condition in conditions:
         
         print condition
-        tot_trial = len(trial_info['Trial'][trial_info[field]==condition])
-        real_trial = len(paradigm[field][paradigm[field]==condition])
+        tot_trial = len(trial_cond['Trial'][trial_cond[field]==condition])
+        real_trial = len(behavioural[field][behavioural[field]==condition])
     
         condition_list.append(real_trial)
         condition_list.append(tot_trial)

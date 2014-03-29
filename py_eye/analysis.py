@@ -9,6 +9,9 @@ import os
 import numpy as np
 import matplotlib.pyplot as plt
 import scipy.interpolate as sp
+from scipy.stats.stats import mode
+from sklearn.linear_model import Ridge
+from checkbox.properties import String
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
@@ -89,7 +92,7 @@ def build_result_structure(conditions, fields):
     return r
 
 
-def open_behavioural(path, subj):
+def open_behavioural_old(path, subj):
     
     import xlrd
     fn = os.path.join(path, subj)
@@ -98,37 +101,90 @@ def open_behavioural(path, subj):
     sh = book.sheet_by_index(0)
     
     behavioural = np.array(zip(
-                               sh.col_values(9)[1:], 
-                     np.float_(sh.col_values(17)[1:]),
-                       np.int_(sh.col_values(8)[1:])
+                               sh.col_values(9)[1:], #COL. J
+                     #np.float_(sh.col_values(17)[1:]), #COL. R
+                     np.float_(sh.col_values(24)[1:]), #COL. Y
+                       np.int_(sh.col_values(8)[1:]), #COL. I
+                       np.int_([(int(x) if x else 0) for x in sh.col_values(23)[1:]]) #COL. X
                             ), 
                         dtype=[('Condition', np.str_,4),
                                ('Accuracy', np.int_, 1),
-                               ('Combination', np.int_, 1),])
+                               ('Combination', np.int_, 1),
+                               ('Combination_New', np.int_, 1)]
+                           )
     
     behavioural['Condition'] = np.core.defchararray.lower(behavioural['Condition'])
     return behavioural
 
-def open_behavioural_v2(path, subj):
+def open_behavioural(path, subj, **kwargs):
+    ############# BOLOGNA ##################
+    
+    dropped_trials = []
+    behavioural_data = []
+    for arg in kwargs:
+        if arg == 'dropped_trials':
+            dropped_trials = np.int_(kwargs[arg].split(','))
+        if arg == 'behavioural_data':
+            behavioural_data = kwargs[arg].split(',')
     
     import xlrd
     fn = os.path.join(path, subj)
     
-    book = xlrd.open_workbook(fn)
-    sh = book.sheet_by_index(0)
+    book = xlrd.open_workbook(fn) #Open workbook
+    sh = book.sheet_by_index(0) #Choose sheet
     
+    labels = sh.row_values(0)
+    labels = [unicode.lower(unicode(l)) for l in labels]
+    l_array = np.array(labels, dtype = np.str)
+    
+    indexes = []
+    data_tot = []
+    dtype = []
+    for field in behavioural_data:
+        index = np.nonzero(l_array == str.lower(field))[0][0]
+        
+        data = sh.col_values(int(index))[1:]
+        #print field
+        type_ = mode([x.__class__ for x in data])[0][0]
+        if type_ == unicode or type == str:
+            data = [x.__class__.lower(x) for x in data]
+            t = (field, np.str_, 15)
+        else:
+            #print data
+            data = [(int(x) if (x != 'NULL') and (x != '') else 0) for x in data]
+            t = (field, np.int_, 1)
+        
+        dtype.append(t)
+        data_tot.append(data)
+    
+    data_tot.append(range(1,len(sh.col_values(0)[1:])+1))
+    dtype.append(('TrialNo.', np.int_, 1))
+    
+    '''    
     behavioural = np.array(zip(
-                               sh.col_values(14)[1:], #Condition Label
-                     np.float_(sh.col_values(6)[1:]), #Accuracy
-                       sh.col_values(16)[1:] #Combination
+                               sh.col_values(6)[1:], #Condition Label
+                               sh.col_values(19)[1:],
+                               np.float_([(int(x) if x else 0) for x in sh.col_values(18)[1:]]), #Accuracy
+                               np.int_([(int(x) if x else 0) for x in sh.col_values(4)[1:]]),
+                               np.arange(len(sh.col_values(0)[1:]))+1 #Combination
                             ), 
-                        dtype=[('Condition', np.str_,10),
-                               ('Accuracy', np.int_, 1),
-                               ('Combination', np.str_, 6),])
-                                #'Combination', np.int_, 1),])
+                           dtype=[('Condition', np.str_,2),
+                                  ('SlideImage', np.str_,10),
+                                  ('Accuracy', np.int_, 1),
+                                  ('Combination', np.int_, 1),
+                                  ('TrialNo.', np.int_, 1)]
+                           )
+    '''
     
-    behavioural['Condition'] = np.core.defchararray.lower(behavioural['Condition'])
-    behavioural['Combination'] = np.core.defchararray.lower(behavioural['Combination'])
+    behavioural = np.array(zip(*data_tot), dtype=dtype)
+    
+    
+    if len(dropped_trials) > 0:
+        mask = 0
+        for trial in dropped_trials:
+            mask = mask + np.int_(behavioural['TrialNo.'] == trial)
+    
+        behavioural = behavioural[~np.bool_(mask)]
     
     return behavioural
 
@@ -152,10 +208,10 @@ def split_data(d_data, fields, chunk_time=0.02, functor=group_function):
         d_trial = data[m_trial]
         n_chunks = np.floor(len(d_trial)/chunk_points)
         
-        included_points = n_chunks * chunk_points
+        included_points = np.int(n_chunks * chunk_points)
         trial_first = np.nonzero(m_trial)[0][0]
         
-        m_trial[trial_first+n_chunks:] = False
+        m_trial[trial_first+int(n_chunks):] = False
         t_mask = t_mask + m_trial
         
         d_trial = d_trial[:included_points]
@@ -187,7 +243,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
     results = build_result_structure(fields, conditions)
     
     f = plt.figure()
-    
+    ridge = Ridge()
     for condition in conditions:
         i = 0
         for field in fields:
@@ -210,7 +266,7 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
                 dim = np.append(dim, d_list.shape[0])
                 data_list.append(d_list)
                 
-            min_ = np.min(dim)
+            min_ = np.int(np.min(dim))
             
             data_list = [d[:min_] for d in data_list]
 
@@ -220,15 +276,16 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
             
             results[field][condition]['mean'] = mean
             results[field][condition]['std'] = std
-            '''
+            #
             xx = np.linspace(0, len(mean), len(mean))
             yy = mean
             
-            smooth = sp.UnivariateSpline(xx, yy, s=1)
-            y_smooth = smooth(xx)
+            ridge.fit(np.vander(xx, 11), yy)
             
-            a.plot(y_smooth, alpha=0.5)
-            '''
+            y_smooth = ridge.predict(np.vander(xx, 11))
+            
+            a.plot(y_smooth, alpha=0.5, linestyle='--')
+            #
             a.plot(mean)
             a.set_title(field)
             a.legend(conditions)

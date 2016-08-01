@@ -6,11 +6,17 @@ import numpy.lib.recfunctions as nprec
 import itertools
 import copy
 
+root_path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/'
 
-path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/'
-path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/PupillaryData/'
-path_behavioural = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/VISIVO/ALL/BehaviouralDataNew/'
+'''
+path = os.path.join(path, 'PupillaryData','VISIVO','ALL')
+path_data = os.path.join(path, 'PupillaryData')
+path_behavioural = os.path.join(path, 'BehaviouralDataNew_xBin')
+'''
 
+path = os.path.join(root_path, 'ESPERIMENTO NEW WITHIN', 'VISIVO')
+path_data = os.path.join(path,'PupillaryData')
+path_behavioural = os.path.join(path,'BehaviouralData_xBin')
 
 conf = read_configuration(path, 'experiment.conf')
 fields = conf['data_fields'].split(',')
@@ -21,7 +27,9 @@ file_list.sort()
 results = []
 results = dict()
 t_count = dict()
-subject_list = np.loadtxt(path+'subject_list.txt', dtype=np.str, delimiter=',')
+subject_list = np.loadtxt(os.path.join(path,'subject_list.txt'), 
+                          dtype=np.str, 
+                          delimiter=',')
     
 for subj in subject_list:
     
@@ -71,14 +79,14 @@ for subj in subject_list:
                               d_data['SampleRate'], seconds = 0.5)
     
     try:
-        [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
+        [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], 
+                                                                  trial_info, 
+                                                                  fields, 
+                                                                  valid_mask)
     except ValueError, err:
         print str(err)
         #continue
-    
-    
-    
-    
+
     d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
                                   d_data['SampleRate'], type='previous', **conf)
     
@@ -90,18 +98,30 @@ for subj in subject_list:
 
 
     #downsampling
+    ### Binseq analysis ##
     
-            
+    condition_ = np.array(behavioural[conf['behavioural_field']], dtype=np.str)
+    bin_ = np.array(behavioural[conf['bin_field']], dtype=np.str)
+    behavioural[conf['behavioural_field']] = np.core.defchararray.add(condition_, bin_)
+    behavioural[conf['behavioural_field']] = behavioural[conf['behavioural_field']].astype(np.str)
+    
+    new_conditions = np.unique(behavioural[conf['behavioural_field']])
+    new_conditions = np.array(new_conditions, dtype=np.str)
+    new_conditions = np.array([c for c in new_conditions if str(c).find('0')==-1], np.str_)
+    
+    conf['conditions'] = ','.join(new_conditions)
+    
     trial_info = extract_trials_info(d_data)
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
     
-    trial_cond = trial_cond[trial_cond['correctedtrial'] == 1]
+    trial_cond = trial_cond[trial_cond['correcttrial'] == 1]
+    #trial_cond = trial_cond[trial_cond['imagedisplay1.acc'] == 1]
     trial_cond = trial_cond[trial_cond['Trial'] > 16]
     
     t_count[name] = count_good_trials(behavioural, trial_cond, **conf)
     
     trial_cond = trial_cond[trial_cond['Length'] > 100]
-    
+
     an, _ = analyze_timecourse(d_data['data'], trial_cond, d_data['SampleRate'], **conf)
     results[name] = an
     
@@ -167,11 +187,11 @@ for name, sheet in sheets.iteritems():
                         sheet.write(3+i, 0, float(time[i]))
                     sheet.write(3+i, r_pos, float(r_data[i]))
                 flag = 1
-filename = 'wbook_simon_bologna_c-nc_mm.xls'
-wbook.save('/media/DATA/eye/'+filename)
+filename = 'wbook_simon_bologna_visivo_bin_corrtrial.xls'
+wbook.save('/home/robbis/eye/'+filename)
 
-filename = 'trial_count_simon_bologna_c-nc_mm.txt'
-file_trial = open('/media/DATA/eye/'+filename, 'w')
+filename = 'trial_count_simon_bologna_visivo_bin_corrtrial.txt'
+file_trial = open('/home/robbis/eye/'+filename, 'w')
 
 conditions = []
 try:

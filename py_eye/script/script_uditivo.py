@@ -7,10 +7,15 @@ import itertools
 import copy
 
 
-
-path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/'
-#path_data = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/PupillaryData/'
-#path_behavioural = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/UDITIVO/BehaviouralDataNew/'
+root_path = '/home/robbis/Dropbox/Simon_Task_Eye_Movement/BOLOGNA/'
+'''
+path = os.path.join(root_path, 'UDITIVO', 'ALL')
+path_data = os.path.join(root_path, 'UDITIVO', 'ALL', 'PupillaryData')
+path_behavioural = os.path.join(root_path, 'UDITIVO', 'ALL', 'BehaviouralDataNew_xBin')
+'''
+path = os.path.join(root_path, 'ESPERIMENTO NEW WITHIN', 'UDITIVO')
+path_data = os.path.join(path,'PupillaryData')
+path_behavioural = os.path.join(path,'BehaviouralData_xBin')
 
 
 conf = read_configuration(path, 'experiment.conf')
@@ -22,12 +27,14 @@ file_list.sort()
 results = []
 results = dict()
 t_count = dict()
-subject_list = np.loadtxt(path+'subject_list.txt', dtype=np.str, delimiter=',')
+subject_list = np.loadtxt(os.path.join(path,'subject_list.txt'),
+                           dtype=np.str, 
+                           delimiter=',')
     
 for subj in subject_list:
     
-    path_data = os.path.join(path, subj[2], 'PupillaryData')
-    path_behavioural = os.path.join(path, subj[2], 'BehaviouralDataNew')
+    #path_data = os.path.join(path, subj[2], 'PupillaryData')
+    #path_behavioural = os.path.join(path, subj[2], 'BehaviouralDataNew_xBin')
     
     d_data, _ = load_data_eye_v2(path_data, subj[0], **conf)
     d_data['data'] = d_data['data'][d_data['data']['Trial']!=0]
@@ -35,10 +42,18 @@ for subj in subject_list:
     
     conf = read_configuration(path, 'experiment.conf')
     
+    # Following lines are used in first experiment
+    # Due to short lenght of fixation trials ( 7pts)
+
+    '''
     if subj[2].find('New') != -1:
         d_data = correct_fixation(d_data, trial_info, 0.2)
         trial_info = extract_trials_info(d_data)
         print trial_info['Length'][::2]
+    '''
+    # This is a check to prevent short fixation length
+    if np.mean(trial_info[::2]['Length']) < 10:
+        print subj
     
     
     paradigm_fn = 'LISTA_TRIAL_'+subj[1]+'.xlsx'
@@ -83,13 +98,13 @@ for subj in subject_list:
                               d_data['SampleRate'], seconds = 0.5)
     
     try:
-        [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], trial_info, fields, valid_mask)
+        [i_data, definitive_mask, bad_trials] = interpolate_trial(d_data['data'], 
+                                                                  trial_info, 
+                                                                  fields, 
+                                                                  valid_mask)
     except ValueError, err:
         print str(err)
-        #continue
-    
-    
-    
+        #continue    
     
     d_data['data'] = baseline_correction(d_data['data'], definitive_mask, trial_info, 
                                   d_data['SampleRate'], type='previous', **conf)
@@ -102,12 +117,24 @@ for subj in subject_list:
 
 
     #downsampling
+    ### Binseq analysis ##
     
-            
+    condition_ = np.array(behavioural[conf['behavioural_field']], dtype=np.str)
+    bin_ = np.array(behavioural[conf['bin_field']], dtype=np.str)
+    behavioural[conf['behavioural_field']] = np.core.defchararray.add(condition_, bin_)
+    behavioural[conf['behavioural_field']] = behavioural[conf['behavioural_field']].astype(np.str)
+    
+    new_conditions = np.unique(behavioural[conf['behavioural_field']])
+    new_conditions = np.array(new_conditions, dtype=np.str)
+    new_conditions = np.array([c for c in new_conditions if str(c).find('0')==-1], np.str_)
+    
+    conf['conditions'] = ','.join(new_conditions)
+    
     trial_info = extract_trials_info(d_data)
     trial_cond, trial_info = merge_paradigm(trial_info, paradigm, behavioural, **conf)
     
-    trial_cond = trial_cond[trial_cond['correctedtrial'] == 1]
+    trial_cond = trial_cond[trial_cond['correcttrial'] == 1]
+    #trial_cond = trial_cond[trial_cond['theslide.acc'] == 1]
     trial_cond = trial_cond[trial_cond['Trial'] > 24]
     
     t_count[name] = count_good_trials(behavioural, trial_cond, **conf)
@@ -179,11 +206,11 @@ for name, sheet in sheets.iteritems():
                         sheet.write(3+i, 0, float(time[i]))
                     sheet.write(3+i, r_pos, float(r_data[i]))
                 flag = 1
-filename = 'wbook_simon_bologna_uditivo_c-nc_new_subj.xls'
-wbook.save('/media/DATA/eye/'+filename)
+filename = 'wbook_simon_bologna_uditivo_binseq_comb.xls'
+wbook.save('/home/robbis/eye/'+filename)
 
-filename = 'trial_count_simon_bologna_uditivo_c-nc_new_subj.txt'
-file_trial = open('/media/DATA/eye/'+filename, 'w')
+filename = 'trial_count_simon_bologna_uditivo_binseq_comb.txt'
+file_trial = open('/home/robbis/eye/'+filename, 'w')
 
 conditions = []
 try:

@@ -159,22 +159,31 @@ def extract_trials_info(d_data):
 
 def correct_fixation(d_data, trial_info, fix_time):
     
+    # Get fixation trial info
     trial_fix = trial_info[::2]
+    # Get data
     data = d_data['data']
-    
+    # Number of points for fixation trial
     fix_points = fix_time * d_data['SampleRate']
     
     for trial in np.unique(trial_fix['Trial']):
        
+        # Get mask for fix and trial
         mask_fix = data['Trial'] == trial
         mask_trial = data['Trial'] == (trial+1) 
         
+        # Compare true fix_point with established fix points
         if np.count_nonzero(mask_fix) < fix_points:
             
+            # Difference of points
             points = fix_points - np.count_nonzero(mask_fix)
             
+            # Build a vector with the trial size
             subvec = np.ones_like(np.nonzero(mask_trial)[0]) * trial+1
+            
+            # Replace first points with fixation trial number
             subvec[:int(points)] = trial
+            # Replace the new trial vector
             data['Trial'][mask_trial] = subvec
             
             

@@ -11,7 +11,6 @@ import matplotlib.pyplot as plt
 import scipy.interpolate as sp
 from scipy.stats.stats import mode
 from sklearn.linear_model import Ridge
-from checkbox.properties import String
 
 def mean_analysis(data, trial_info, downsampling=False, **kwargs):
     #Da rivedere
@@ -144,11 +143,11 @@ def open_behavioural(path, subj, **kwargs):
         index = np.nonzero(l_array == str.lower(field))[0][0]
         
         data = sh.col_values(int(index))[1:]
-        #print field
+        print field
         type_ = mode([x.__class__ for x in data])[0][0]
         if type_ == unicode or type == str:
             data = [x.__class__.lower(x) for x in data]
-            t = (field, np.str_, 15)
+            t = (field, np.str_, 45)
         else:
             #print data
             data = [(int(x) if (x != 'NULL') and (x != '') else 0) for x in data]
@@ -239,7 +238,9 @@ def analyze_timecourse(data, trial_cond, sample_rate, **kwargs):
                 continue
         if arg == 'behavioural_field':
             column = kwargs[arg]    
-    
+    print column
+    print conditions
+    print fields
     results = build_result_structure(fields, conditions)
     
     f = plt.figure()

@@ -548,7 +548,13 @@ def interpolate(data, valid_mask, mask_trial, fields):
         except LinAlgError,err:
             ridge.fit(np.vander(xx, 9), y_smooth)
             y_fit = ridge.predict(np.vander(xx, 9))
-        """    
+        """
+        
+        #plt.figure()
+        #plt.plot(xx, y_smooth, color='b')
+        #plt.plot(xx, yy, color='r')
+        #plt.plot(x, y, color='g')
+        
         m_data[field] = np.array(y_smooth, dtype=np.float32)
 
     return m_data

@@ -82,7 +82,7 @@ def load_data_eye_v2(path, filename, **kwargs):
         if arg == 'valid_msg':
             conditions = kwargs[arg].split(',')
 
-    
+    print conditions
     name = os.path.join(path, filename)
     
     hdr = open(name, 'r')
